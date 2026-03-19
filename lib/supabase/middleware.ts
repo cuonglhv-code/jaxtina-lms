@@ -37,7 +37,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   // Calling getUser() triggers a token refresh if the access token has expired.
   // Do not remove this — session refresh will silently break without it.
-  await supabase.auth.getUser()
+  // Wrapped in try/catch so a missing/invalid env var fails fast instead of hanging.
+  try {
+    await supabase.auth.getUser()
+  } catch (err) {
+    console.error('[updateSession] Supabase getUser failed:', err)
+  }
 
   return supabaseResponse
 }
