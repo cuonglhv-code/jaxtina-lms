@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 
@@ -92,7 +93,9 @@ export async function loginAction(
     (redirectTo && redirectTo !== '/login' ? redirectTo : undefined) ??
     (profile?.role ? ROLE_DASHBOARD[profile.role] : undefined) ??
     '/dashboard'
-
+ 
+   // FIX: Clear the router cache so Next.js knows the user is authenticated
+  revalidatePath('/', 'layout')
   redirect(destination)
 }
 
@@ -138,6 +141,8 @@ export async function registerAction(
   if (!data.session) {
     return { error: 'Account created! Please check your email inbox to confirm your account before logging in.' }
   }
-
+ 
+   // FIX: Clear the router cache here as well
+  revalidatePath('/', 'layout')
   redirect('/dashboard')
 }
