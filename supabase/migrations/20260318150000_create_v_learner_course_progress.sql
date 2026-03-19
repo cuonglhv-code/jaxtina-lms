@@ -1,22 +1,24 @@
 -- =============================================================================
 -- Migration: 20260318150000_create_v_learner_course_progress.sql
--- Creates the v_learner_course_progress view and adds 'ai_scored' to
--- submission_status enum for the IELTS AI-scoring pipeline.
+-- Creates the v_learner_course_progress view and adds 'under_review' to
+-- the submission_status enum if it does not already exist.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- Add 'ai_scored' to submission_status if not yet present
+-- Add 'under_review' to submission_status if not yet present
 -- ---------------------------------------------------------------------------
 do $$
 begin
   if not exists (
-    select 1 from pg_enum
-    where enumlabel = 'ai_scored'
-      and enumtypid = 'public.submission_status'::regtype
+    select 1
+    from pg_type t
+    join pg_enum e on t.oid = e.enumtypid
+    where t.typname = 'submission_status'
+    and e.enumlabel = 'under_review'
   ) then
-    alter type public.submission_status add value 'ai_scored' after 'submitted';
+    alter type public.submission_status add value 'under_review' after 'submitted';
   end if;
-end$$;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- v_learner_course_progress
