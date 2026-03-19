@@ -1,183 +1,69 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
-import type { Database } from '@/types/database'
 
-// ---------------------------------------------------------------------------
-// Route classification
-// ---------------------------------------------------------------------------
-
-/** Authenticated users are redirected away from these to their dashboard. */
-const AUTH_ONLY_ROUTES = ['/login', '/register', '/reset-password']
-
-/**
- * Routes that are always accessible without a session.
- * Lesson preview: /courses/[id]/lessons/[id]?preview=true is handled inline.
- */
-const PUBLIC_ROUTES = ['/', ...AUTH_ONLY_ROUTES]
-
-/** Any path starting with these prefixes requires a valid session. */
-const PROTECTED_PREFIXES = [
-  '/dashboard',   // (learner)
-  '/courses',     // (learner) — catalog + lesson player
-  '/writing',     // (learner)
-  '/teacher',     // (teacher)
-  '/admin',       // (admin)
-]
-
-/** Role requirements per URL prefix. Uncovered prefixes need auth only. */
-const ROLE_REQUIREMENTS: Array<{
-  prefix: string
-  roles: string[]
-  redirectTo: string
-}> = [
-  {
-    prefix: '/teacher',
-    roles: ['teacher', 'academic_admin', 'centre_admin', 'super_admin'],
-    redirectTo: '/dashboard',
-  },
-  {
-    prefix: '/admin',
-    roles: ['academic_admin', 'centre_admin', 'super_admin'],
-    redirectTo: '/dashboard',
-  },
-]
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function isProtected(pathname: string): boolean {
-  return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
-  )
-}
-
-function isAuthOnly(pathname: string): boolean {
-  return AUTH_ONLY_ROUTES.some((route) => pathname === route)
-}
-
-function isLessonPreview(pathname: string, searchParams: URLSearchParams): boolean {
-  // /courses/[courseId]/lessons/[lessonId]?preview=true
-  // DB-level preview flag enforcement happens in the Server Component — middleware
-  // only checks the param to avoid a DB round-trip on every request.
-  return (
-    /^\/courses\/[^/]+\/lessons\/[^/]+$/.test(pathname) &&
-    searchParams.get('preview') === 'true'
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Middleware
-// ---------------------------------------------------------------------------
+const PUBLIC_ROUTES = ['/', '/login', '/register', '/reset-password']
 
 export async function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl
-  console.log('[middleware] path:', pathname)
+  const { pathname } = request.nextUrl
 
-  // 1. Short-circuit for api routes and static files.
+  // Never intercept public routes or Next.js internals
   if (
+    PUBLIC_ROUTES.includes(pathname) ||
     pathname.startsWith('/api/') ||
-    pathname.startsWith('/_next/')
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/favicon')
   ) {
     return NextResponse.next()
   }
 
-  // 2. Always refresh the session so cookies stay alive.
-  const response = await updateSession(request)
+  let supabaseResponse = NextResponse.next({ request })
 
-  // 3. Skip protection for any other unprotected, non-auth path.
-  if (!isProtected(pathname) && !isAuthOnly(pathname)) {
-    return response
-  }
-
-  // 4. Allow lesson previews through without auth.
-  if (isLessonPreview(pathname, searchParams)) {
-    return response
-  }
-
-  // 5. Resolve the current user from the refreshed session.
-  //    We create a lightweight client here (no cookie writes needed — updateSession
-  //    already handled that above and returned the response with fresh cookies).
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            )
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
         },
-        setAll() {
-          // No-op: cookie writes were handled by updateSession.
-        },
-      },
-    }
-  )
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  console.log('[middleware] session:', user ? 'exists' : 'null')
-
-  // 6. Unauthenticated — redirect to login, preserving the intended destination.
-  if (!user && isProtected(pathname)) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('redirectTo', pathname)
-    console.log('[middleware] redirecting to:', loginUrl.pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  // 7. Already authenticated — redirect away from login/register/reset.
-  if (user && isAuthOnly(pathname)) {
-    const homeUrl = request.nextUrl.clone()
-    homeUrl.pathname = '/dashboard'
-    homeUrl.search = ''
-    console.log('[middleware] redirecting to:', homeUrl.pathname)
-    return NextResponse.redirect(homeUrl)
-  }
-
-  // 8. Role-based access control for /teacher/* and /admin/*.
-  if (user) {
-    const roleRule = ROLE_REQUIREMENTS.find(
-      (rule) =>
-        pathname === rule.prefix || pathname.startsWith(rule.prefix + '/')
+      }
     )
 
-    if (roleRule) {
-      // Fetch the user's role from user_profiles.
-      // This is a single indexed lookup — acceptable in Edge middleware.
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single() as { data: { role: string } | null; error: unknown }
+    const { data: { session } } = await supabase.auth.getSession()
 
-      const userRole = profile?.role
-
-      if (!userRole || !roleRule.roles.includes(userRole)) {
-        const redirectUrl = request.nextUrl.clone()
-        redirectUrl.pathname = roleRule.redirectTo
-        redirectUrl.search = ''
-        console.log('[middleware] redirecting to:', redirectUrl.pathname)
-        return NextResponse.redirect(redirectUrl)
-      }
+    if (!session) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
     }
+
+  } catch (error) {
+    console.error('[middleware] error:', error)
+    return NextResponse.next()
   }
 
-  return response
+  return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all paths except:
-     * - _next/static  (static files)
-     * - _next/image   (image optimisation)
-     * - favicon.ico
-     * - Public assets (svg, png, jpg, …)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/admin/:path*',
+    '/teacher/:path*',
+    '/learner/:path*',
+    '/dashboard/:path*',
+    '/courses/:path*',
+    '/submissions/:path*',
+    '/writing/:path*',
   ],
 }

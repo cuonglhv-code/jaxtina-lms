@@ -50,6 +50,13 @@
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
 
+html,
+body {
+  min-height: 100vh;
+  background-color: white;
+  color: #111827;
+}
+
 body {
   font-family: var(--font-dm-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
