@@ -69,20 +69,18 @@ export async function loginAction(
   const { email, password, redirectTo } = parsed.data
   const supabase = await createClient()
 
-  // FIX: Extract authData directly from the sign-in response
   const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Surface auth errors without leaking implementation details
     if (error.message.toLowerCase().includes('invalid')) {
       return { error: 'Incorrect email or password.' }
     }
     return { error: error.message }
   }
 
-  // FIX: Use authData.user instead of making a second round-trip request
-  if (!authData.user) {
-    return { error: 'Sign-in succeeded but session could not be established. Please try again.' }
+  // FIX: Explicitly check if a session was created. If not, they must confirm their email.
+  if (!authData.session) {
+    return { error: 'Please check your email and verify your account before logging in.' }
   }
 
   const { data: profile } = (await supabase
@@ -96,7 +94,6 @@ export async function loginAction(
     (profile?.role ? ROLE_DASHBOARD[profile.role] : undefined) ??
     '/dashboard'
 
-  // FIX: Force Next.js to drop its cached state so the middleware picks up the session properly
   revalidatePath('/', 'layout')
   redirect(destination)
 }
@@ -123,7 +120,7 @@ export async function registerAction(
   const { fullName, email, password } = parsed.data
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -138,7 +135,12 @@ export async function registerAction(
     return { error: error.message }
   }
 
-  // FIX: Revalidate layout cache on register as well
+  // FIX: If Supabase has "Confirm Email" enabled, the session will be null. 
+  // We must stop the redirect and tell the user to check their email.
+  if (!data.session) {
+    return { error: 'Account created! Please check your email inbox to confirm your account before logging in.' }
+  }
+
   revalidatePath('/', 'layout')
   redirect('/dashboard')
 }
