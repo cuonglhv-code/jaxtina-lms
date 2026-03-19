@@ -75,8 +75,9 @@ export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl
 
   // 1. Short-circuit for paths that must never touch Supabase.
+  //    Includes '/' because app/page.tsx unconditionally redirects to /login anyway.
   //    This prevents hangs if env vars are missing/wrong on the hosting platform.
-  const PUBLIC_PATHS = ['/login', '/register', '/reset-password']
+  const PUBLIC_PATHS = ['/', '/login', '/register', '/reset-password']
   if (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/api/') ||
@@ -88,7 +89,7 @@ export async function proxy(request: NextRequest) {
   // 2. Always refresh the session so cookies stay alive.
   const response = await updateSession(request)
 
-  // 3. Skip protection for unprotected, non-auth paths (e.g. '/').
+  // 3. Skip protection for any other unprotected, non-auth path.
   if (!isProtected(pathname) && !isAuthOnly(pathname)) {
     return response
   }
