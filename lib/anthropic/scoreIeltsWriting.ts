@@ -279,7 +279,7 @@ Return ONLY valid JSON — no markdown fences, no preamble:
 
     await supabase
       .from('submissions')
-      .update({ status: 'ai_scored' } as never)
+      .update({ status: 'under_review' } as never)
       .eq('id', submissionId)
 
     // ── Notify learner ─────────────────────────────────────────────────────

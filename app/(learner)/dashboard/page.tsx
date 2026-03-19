@@ -121,7 +121,7 @@ export default async function LearnerDashboardPage() {
       .from('submissions')
       .select('id', { count: 'exact', head: true })
       .eq('learner_id', user.id)
-      .in('status', ['submitted', 'ai_scored']),
+      .in('status', ['submitted', 'under_review']), // ✅ Matches database schema
 
     // e) Latest band score from feedback
     supabase

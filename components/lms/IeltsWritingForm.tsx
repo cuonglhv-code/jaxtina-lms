@@ -176,7 +176,7 @@ export function IeltsWritingForm({
           data: { status: string; feedback: FeedbackRow | null }
         }
 
-        if (json.success && json.data.status === 'ai_scored' && json.data.feedback) {
+        if (json.success && json.data.status === 'under_review' && json.data.feedback) {
           stopPolling()
           setFeedback(json.data.feedback)
           setPhase('feedback_ready')

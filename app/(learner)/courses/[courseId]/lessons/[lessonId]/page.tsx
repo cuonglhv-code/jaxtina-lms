@@ -513,7 +513,7 @@ function AssignmentsSection({ assignments }: { assignments: AssignmentRow[] }) {
                       'inline-block text-[10px] font-medium px-2 py-0.5 rounded-full',
                       submission.status === 'reviewed'
                         ? 'bg-brand-green-light text-brand-green'
-                        : submission.status === 'submitted' || submission.status === 'ai_scored'
+                        : submission.status === 'submitted' || submission.status === 'under_review'
                         ? 'bg-amber-light text-amber'
                         : 'bg-gray-100 text-gray-500',
                     ].join(' ')}

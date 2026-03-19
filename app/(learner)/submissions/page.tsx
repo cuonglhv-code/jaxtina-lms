@@ -43,7 +43,6 @@ interface SubmissionRow {
 const STATUS_BADGE: Record<string, 'gray' | 'blue' | 'amber' | 'teal' | 'green'> = {
   draft:        'gray',
   submitted:    'blue',
-  ai_scored:    'amber',
   under_review: 'teal',
   reviewed:     'green',
 }
@@ -78,7 +77,6 @@ export default async function SubmissionsPage() {
   const STATUS_LABELS: Record<string, string> = {
     draft:        t('statusDraft'),
     submitted:    t('statusSubmitted'),
-    ai_scored:    t('statusAiScored'),
     under_review: t('statusUnderReview'),
     reviewed:     t('statusReviewed'),
   }

@@ -47,12 +47,12 @@ function sectionLabel(text: string) {
 }
 
 const STATUS_STYLE: Record<string, { dot: string; bg: string; text: string; border: string }> = {
-  submitted: { dot: 'bg-blue-500',  bg: 'bg-blue-50',  text: 'text-blue-700',  border: 'border-blue-200'  },
-  ai_scored: { dot: 'bg-amber-500', bg: 'bg-amber-light', text: 'text-amber',  border: 'border-amber/20'  },
-  reviewed:  { dot: 'bg-teal',      bg: 'bg-teal-light', text: 'text-teal-text', border: 'border-teal/20' },
+  submitted:    { dot: 'bg-blue-500',  bg: 'bg-blue-50',  text: 'text-blue-700',  border: 'border-blue-200'  },
+  under_review: { dot: 'bg-amber-500', bg: 'bg-amber-light', text: 'text-amber',  border: 'border-amber/20'  },
+  reviewed:     { dot: 'bg-teal',      bg: 'bg-teal-light', text: 'text-teal-text', border: 'border-teal/20' },
 }
 
-const QUEUE_STATUSES = ['submitted', 'ai_scored', 'reviewed'] as const
+const QUEUE_STATUSES = ['submitted', 'under_review', 'reviewed'] as const
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -62,9 +62,9 @@ export default async function TeacherDashboardPage() {
   const supabase = await createClient()
 
   const STATUS_META: Record<string, { label: string } & typeof STATUS_STYLE[string]> = {
-    submitted: { label: tSub('statusSubmitted'),       ...STATUS_STYLE.submitted },
-    ai_scored: { label: tSub('statusAiScored'),        ...STATUS_STYLE.ai_scored },
-    reviewed:  { label: tSub('statusTeacherReviewed'), ...STATUS_STYLE.reviewed  },
+    submitted:    { label: tSub('statusSubmitted'),       ...STATUS_STYLE.submitted },
+    under_review: { label: tSub('statusAiScored'),        ...STATUS_STYLE.under_review },
+    reviewed:     { label: tSub('statusTeacherReviewed'), ...STATUS_STYLE.reviewed  },
   }
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -110,7 +110,7 @@ export default async function TeacherDashboardPage() {
     QUEUE_STATUSES.map(s => [s, queueRows.filter(r => r.status === s).length])
   ) as Record<typeof QUEUE_STATUSES[number], number>
 
-  const totalPending = statusCounts.submitted + statusCounts.ai_scored
+  const totalPending = statusCounts.submitted + statusCounts.under_review
 
   return (
     <div className="space-y-0 max-w-4xl">
@@ -128,15 +128,15 @@ export default async function TeacherDashboardPage() {
         </div>
 
         {/* CTA: review AI-scored submissions */}
-        {statusCounts.ai_scored > 0 && (
+        {statusCounts.under_review > 0 && (
           <Link
-            href="/teacher/submissions?status=ai_scored"
+            href="/teacher/submissions?status=under_review"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-amber text-white text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <FileText size={15} aria-hidden />
             {t('reviewAiScored')}
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-xs font-medium">
-              {statusCounts.ai_scored}
+              {statusCounts.under_review}
             </span>
             <ArrowRight size={14} aria-hidden />
           </Link>

@@ -25,7 +25,7 @@ interface QueueRow {
   feedback_source:  string | null
 }
 
-type FilterStatus = 'all' | 'submitted' | 'ai_scored' | 'reviewed'
+type FilterStatus = 'all' | 'submitted' | 'under_review' | 'reviewed'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -43,10 +43,10 @@ function bandColor(score: number | null): string {
   return 'text-teal-text font-medium'
 }
 
-const STATUS_BADGE: Record<string, { variant: 'blue' | 'amber' | 'green' | 'gray'; label?: string }> = {
-  submitted: { variant: 'blue' },
-  ai_scored: { variant: 'amber' },
-  reviewed:  { variant: 'green' },
+const STATUS_BADGE: Record<string, { variant: 'blue' | 'amber' | 'teal' | 'green' | 'gray'; label?: string }> = {
+  submitted:    { variant: 'blue' },
+  under_review: { variant: 'amber' },
+  reviewed:     { variant: 'green' },
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -61,16 +61,16 @@ export default async function TeacherSubmissionsPage({
   const supabase = await createClient()
 
   const STATUS_META: Record<string, { label: string }> = {
-    submitted: { label: t('statusSubmitted')       },
-    ai_scored: { label: t('statusAiScored')        },
-    reviewed:  { label: t('statusTeacherReviewed') },
+    submitted:    { label: t('statusSubmitted')    },
+    under_review: { label: t('statusUnderReview')  },
+    reviewed:     { label: t('statusReviewed')     },
   }
 
   const TABS: { value: FilterStatus; label: string }[] = [
-    { value: 'all',       label: t('tabAll')           },
-    { value: 'submitted', label: t('tabPendingAi')     },
-    { value: 'ai_scored', label: t('tabReadyToReview') },
-    { value: 'reviewed',  label: t('tabReviewed')      },
+    { value: 'all',          label: t('tabAll')           },
+    { value: 'submitted',    label: t('tabPendingAi')     },
+    { value: 'under_review', label: t('tabReadyToReview') },
+    { value: 'reviewed',     label: t('tabReviewed')      },
   ]
 
   const { data: { user } } = await supabase.auth.getUser()
