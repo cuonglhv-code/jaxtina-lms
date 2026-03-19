@@ -141,6 +141,35 @@ NEXT_PUBLIC_APP_URL=
 
 ---
 
+## Database Schemas (Production)
+
+### Table: `user_profiles`
+Columns ONLY:
+- `id` (uuid, PK)
+- `role` (user_role)
+- `full_name` (text)
+- `display_name` (text)
+- `avatar_url` (text)
+- `phone` (text)
+- `preferred_lang` (text)
+- `email` (text)
+- `created_at` (timestamptz)
+- `updated_at` (timestamptz)
+
+**NO `organisation_id`, NO `branch_id`, NO `org_id`, NO `is_active` in this table.**
+
+### Table: `branches`
+- `id` (uuid, PK)
+- `organisation_id` (uuid)
+- `name` (text)
+- `city` (text)
+- `address` (text)
+- `created_at` (timestamptz)
+
+**NO `code` column, NO `org_id` (use `organisation_id`).**
+
+---
+
 ## What NOT to Do
 
 - Do **not** install Prisma or any secondary ORM
