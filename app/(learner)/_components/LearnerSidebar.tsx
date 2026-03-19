@@ -2,22 +2,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import {
-  BookOpen, Users, UserCheck, GraduationCap, BarChart3,
-  LogOut, Menu, X,
-} from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
+import { LayoutDashboard, BookOpen, Pencil, Bell, Menu, X } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/admin/courses',   label: 'Courses',   icon: BookOpen },
-  { href: '/admin/classes',   label: 'Classes',   icon: Users },
-  { href: '/admin/users',     label: 'Learners',  icon: UserCheck },
-  { href: '/admin/teachers',  label: 'Teachers',  icon: GraduationCap },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard',      label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/courses',        label: 'My Courses',    icon: BookOpen },
+  { href: '/writing',        label: 'Practice',      icon: Pencil },
+  { href: '/notifications',  label: 'Notifications', icon: Bell },
 ] as const
 
-interface AdminSidebarProps {
+interface LearnerSidebarProps {
   fullName: string
   role:     string
 }
@@ -32,26 +27,13 @@ function getInitials(name: string): string {
     .toUpperCase()
 }
 
-function roleLabel(role: string): string {
-  if (role === 'super_admin')  return 'Super Admin'
-  if (role === 'centre_admin') return 'Admin'
-  return role.replace(/_/g, ' ')
-}
-
-export function AdminSidebar({ fullName, role }: AdminSidebarProps) {
+export function LearnerSidebar({ fullName, role }: LearnerSidebarProps) {
   const pathname = usePathname()
-  const router   = useRouter()
   const [open, setOpen] = useState(false)
   const initials = getInitials(fullName) || '?'
-  const supabase = createClient()
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
 
   const nav = (
-    <nav className="flex-1 py-4" aria-label="Admin navigation">
+    <nav className="flex-1 py-4" aria-label="Main navigation">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href || pathname.startsWith(href + '/')
         return (
@@ -86,18 +68,6 @@ export function AdminSidebar({ fullName, role }: AdminSidebarProps) {
 
       {nav}
 
-      {/* Logout */}
-      <div className="px-5 pb-3 border-t border-white/[0.08] pt-3">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-[12px] text-white/40 hover:text-white/70 transition-colors"
-          aria-label="Log out"
-        >
-          <LogOut size={14} aria-hidden />
-          Log out
-        </button>
-      </div>
-
       {/* User footer */}
       <div className="border-t border-white/[0.08] p-4 flex items-center gap-3 min-w-0">
         <div
@@ -107,8 +77,8 @@ export function AdminSidebar({ fullName, role }: AdminSidebarProps) {
           {initials}
         </div>
         <div className="min-w-0">
-          <p className="text-[12px] text-white/80 font-medium truncate">{fullName || 'Admin'}</p>
-          <p className="text-[10px] text-white/35">{roleLabel(role)}</p>
+          <p className="text-[12px] text-white/80 font-medium truncate">{fullName || 'Learner'}</p>
+          <p className="text-[10px] text-white/35 capitalize">{role.replace('_', ' ')}</p>
         </div>
       </div>
     </div>
@@ -121,7 +91,7 @@ export function AdminSidebar({ fullName, role }: AdminSidebarProps) {
         {sidebar}
       </aside>
 
-      {/* ── Mobile: hamburger trigger ── */}
+      {/* ── Mobile: hamburger trigger (drawer only) ── */}
       <button
         onClick={() => setOpen(o => !o)}
         aria-label={open ? 'Close menu' : 'Open menu'}
@@ -147,7 +117,7 @@ export function AdminSidebar({ fullName, role }: AdminSidebarProps) {
       {/* ── Mobile: fixed bottom nav bar ── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 bg-navy z-30 flex items-center justify-around border-t border-white/[0.08] px-1 py-1.5"
-        aria-label="Admin bottom navigation"
+        aria-label="Bottom navigation"
       >
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/')
@@ -157,12 +127,12 @@ export function AdminSidebar({ fullName, role }: AdminSidebarProps) {
               href={href}
               aria-current={isActive ? 'page' : undefined}
               className={[
-                'flex flex-col items-center gap-0.5 px-2 py-1 rounded-md transition-colors min-w-0',
+                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-md transition-colors min-w-0',
                 isActive ? 'text-white' : 'text-white/40 hover:text-white/70',
               ].join(' ')}
             >
-              <Icon size={18} aria-hidden />
-              <span className="text-[9px] tracking-wide leading-none">{label}</span>
+              <Icon size={19} aria-hidden />
+              <span className="text-[9px] tracking-wide leading-none">{label.split(' ')[0]}</span>
             </Link>
           )
         })}

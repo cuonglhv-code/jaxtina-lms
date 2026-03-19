@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, BookOpen } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { CourseOutline } from '@/components/lms/course-outline'
+import { Badge }       from '@/components/ui/Badge'
+import { Card }        from '@/components/ui/Card'
+import { ProgressBar } from '@/components/ui/ProgressBar'
 import type { ModuleRow } from '@/components/lms/course-outline'
 import type { Metadata } from 'next'
 
@@ -23,7 +25,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CourseOutlinePage({ params }: PageProps) {
   const { courseId } = await params
-  const t        = await getTranslations()
   const supabase = await createClient()
 
   const {
@@ -72,7 +73,7 @@ export default async function CourseOutlinePage({ params }: PageProps) {
     return (
       <div
         role="alert"
-        className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"
+        className="rounded-lg bg-brand-red-light border border-brand-red/20 px-4 py-3 text-sm text-brand-red"
       >
         Failed to load course content: {modulesError.message}
       </div>
@@ -92,40 +93,38 @@ export default async function CourseOutlinePage({ params }: PageProps) {
   )
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-5 max-w-3xl">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-slate-500">
-        <Link href="/learner/dashboard" className="hover:text-slate-800 transition-colors">
-          {t('courses.breadcrumbDashboard')}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[12px] text-gray-400">
+        <Link href="/dashboard" className="hover:text-gray-700 transition-colors">
+          Dashboard
         </Link>
-        <ChevronRight size={14} className="flex-shrink-0" />
-        <Link href="/learner/courses" className="hover:text-slate-800 transition-colors">
-          {t('courses.breadcrumbCourses')}
+        <ChevronRight size={13} className="flex-shrink-0" />
+        <Link href="/courses" className="hover:text-gray-700 transition-colors">
+          My Courses
         </Link>
-        <ChevronRight size={14} className="flex-shrink-0" />
-        <span className="text-slate-800 font-medium truncate">{course.title}</span>
+        <ChevronRight size={13} className="flex-shrink-0" />
+        <span className="text-gray-700 truncate">{course.title}</span>
       </nav>
 
       {/* Course header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <Card padding="lg">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-            <BookOpen size={22} className="text-indigo-600" aria-hidden />
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-light flex items-center justify-center">
+            <BookOpen size={20} className="text-teal" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-slate-900">{course.title}</h1>
+              <h1 className="font-display text-xl text-gray-900">{course.title}</h1>
               {course.level && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
-                  {course.level}
-                </span>
+                <Badge variant="teal">{course.level}</Badge>
               )}
             </div>
             {className && (
-              <p className="mt-0.5 text-sm text-slate-500">{className}</p>
+              <p className="mt-0.5 text-[12px] text-gray-400">{className}</p>
             )}
             {course.description && (
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+              <p className="mt-2 text-sm text-gray-600 leading-relaxed">
                 {course.description}
               </p>
             )}
@@ -135,30 +134,20 @@ export default async function CourseOutlinePage({ params }: PageProps) {
         {/* Progress summary */}
         <div className="mt-5">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-500">
-              {t('outline.lessonsOf', { completed: completedLessons, total: totalLessons })}
+            <span className="text-[11px] text-gray-400">
+              {completedLessons} of {totalLessons} lesson{totalLessons !== 1 ? 's' : ''} completed
             </span>
-            <span className="text-xs font-semibold text-slate-700">{completionPct}%</span>
+            <span className="text-[11px] font-medium text-gray-600">{Math.round(completionPct)}%</span>
           </div>
-          <div
-            className="h-2.5 bg-slate-100 rounded-full overflow-hidden"
-            role="progressbar"
-            aria-valuenow={completionPct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Course progress: ${completionPct}%`}
-          >
-            <div
-              className="h-full bg-indigo-500 rounded-full transition-[width] duration-500"
-              style={{ width: `${completionPct}%` }}
-            />
-          </div>
+          <ProgressBar value={completionPct} size="sm" />
         </div>
-      </div>
+      </Card>
 
       {/* Module accordion */}
       <section aria-label="Course content">
-        <h2 className="text-base font-semibold text-slate-700 mb-3">{t('outline.courseContent')}</h2>
+        <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-3.5">
+          Course content
+        </p>
         <CourseOutline courseId={courseId} modules={modules} />
       </section>
     </div>

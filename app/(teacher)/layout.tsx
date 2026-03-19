@@ -34,7 +34,7 @@ export default async function TeacherLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       <TeacherNav
         fullName={profile.full_name ?? ''}
         userId={user.id}

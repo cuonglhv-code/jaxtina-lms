@@ -76,25 +76,25 @@ function ModuleSection({
   const total = mod.lessons.length
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-100 rounded-lg overflow-hidden">
       {/* Module header */}
       <button
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="w-full flex items-center justify-between gap-3 px-5 py-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
       >
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-800 truncate">
+          <h3 className="text-sm font-medium text-gray-800 truncate">
             {mod.title}
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-[11px] text-gray-400 mt-0.5">
             {t('lessonsCompleted', { completed: completedCount, total })}
           </p>
         </div>
         <ChevronDown
           size={16}
           className={[
-            'flex-shrink-0 text-slate-400 transition-transform',
+            'flex-shrink-0 text-gray-400 transition-transform',
             open ? 'rotate-180' : '',
           ].join(' ')}
           aria-hidden
@@ -103,7 +103,7 @@ function ModuleSection({
 
       {/* Lesson list */}
       {open && (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-gray-50">
           {mod.lessons
             .slice()
             .sort((a, b) => a.position - b.position)
@@ -116,37 +116,37 @@ function ModuleSection({
               return (
                 <li key={lesson.id}>
                   <Link
-                    href={`/learner/courses/${courseId}/lessons/${lesson.id}`}
-                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-indigo-50 transition-colors group"
+                    href={`/courses/${courseId}/lessons/${lesson.id}`}
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-teal-light transition-colors group"
                   >
                     {/* Completion status / type icon */}
                     {isCompleted ? (
                       <CheckCircle
                         size={18}
-                        className="flex-shrink-0 text-green-500"
+                        className="flex-shrink-0 text-teal"
                         aria-label="Completed"
                       />
                     ) : (
                       <Icon
                         size={18}
-                        className="flex-shrink-0 text-slate-400 group-hover:text-indigo-500 transition-colors"
+                        className="flex-shrink-0 text-gray-400 group-hover:text-teal transition-colors"
                         aria-hidden
                       />
                     )}
 
-                    <span className="flex-1 min-w-0 text-sm text-slate-700 group-hover:text-indigo-700 truncate">
+                    <span className="flex-1 min-w-0 text-[13px] text-gray-700 group-hover:text-navy truncate">
                       {lesson.title}
                     </span>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {/* Type badge */}
-                      <span className="hidden sm:inline text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                      <span className="hidden sm:inline text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
                         {LESSON_TYPE_LABELS[lesson.lesson_type] ?? lesson.lesson_type}
                       </span>
 
                       {/* Duration */}
                       {duration && (
-                        <span className="flex items-center gap-1 text-xs text-slate-400">
+                        <span className="flex items-center gap-1 text-[11px] text-gray-400">
                           <Clock size={12} aria-hidden />
                           {duration}
                         </span>
@@ -154,7 +154,7 @@ function ModuleSection({
 
                       {/* In-progress indicator */}
                       {!isCompleted && (progress?.progress_pct ?? 0) > 0 && (
-                        <span className="text-[10px] font-medium text-indigo-500">
+                        <span className="text-[10px] font-medium text-teal">
                           {progress!.progress_pct}%
                         </span>
                       )}
@@ -165,7 +165,7 @@ function ModuleSection({
             })}
 
           {mod.lessons.length === 0 && (
-            <li className="px-5 py-4 text-sm text-slate-400 italic">
+            <li className="px-5 py-4 text-sm text-gray-400 italic">
               {t('noLessons')}
             </li>
           )}
@@ -182,14 +182,14 @@ export function CourseOutline({ courseId, modules }: CourseOutlineProps) {
 
   if (modules.length === 0) {
     return (
-      <p className="text-sm text-slate-500 italic py-6 text-center">
+      <p className="text-sm text-gray-400 italic py-6 text-center">
         {t('noModules')}
       </p>
     )
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {modules
         .slice()
         .sort((a, b) => a.position - b.position)

@@ -2,9 +2,9 @@
 
 import { useState, useId } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { CheckCircle, AlertCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { FeedbackCard } from '@/components/lms/FeedbackCard'
+import { Card, Button } from '@/components/ui'
 import type { FeedbackRow } from '@/types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ function BandInput({
   const invalid = value !== '' && !VALID_BANDS.includes(parseFloat(value))
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+      <label htmlFor={id} className="block text-[11px] text-gray-400 mb-1">
         <span title={title}>{label}</span>
       </label>
       <select
@@ -78,12 +78,11 @@ function BandInput({
         disabled={disabled}
         aria-invalid={invalid}
         className={[
-          'w-full rounded-xl border px-3 py-2 text-sm font-semibold bg-white transition-colors',
+          'w-full border rounded-md px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 transition-colors',
           invalid
-            ? 'border-red-400 text-red-600 focus:ring-red-300'
-            : 'border-slate-300 text-slate-800 focus:border-teal-400 focus:ring-teal-100',
-          'focus:outline-none focus:ring-2',
-          disabled ? 'opacity-60 cursor-not-allowed' : '',
+            ? 'border-brand-red text-brand-red focus:ring-brand-red'
+            : 'border-gray-200 text-gray-700 focus:border-teal focus:ring-teal',
+          disabled ? 'opacity-60 cursor-not-allowed bg-gray-50' : 'bg-white',
         ].join(' ')}
       >
         <option value="">{t('selectBand')}</option>
@@ -189,161 +188,155 @@ export function TeacherReviewForm({
   // ── Success state ──────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-2xl px-6 py-10 text-center space-y-3">
-        <CheckCircle size={36} className="mx-auto text-green-500" aria-hidden />
-        <p className="text-base font-semibold text-green-800">{t('reviewSubmitted')}</p>
-        <p className="text-sm text-green-600">{t('learnerNotified')}</p>
-      </div>
+      <Card padding="md">
+        <div className="py-6 text-center space-y-2">
+          <CheckCircle size={32} className="mx-auto text-teal" aria-hidden />
+          <p className="text-sm font-medium text-gray-900">{t('reviewSubmitted')}</p>
+          <p className="text-[13px] text-gray-400">{t('learnerNotified')}</p>
+        </div>
+      </Card>
     )
   }
 
   return (
-    <form id={formId} onSubmit={handleSubmit} className="space-y-6" noValidate>
+    <Card padding="md">
+      <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-4">
+        {t('teacherReview')}
+      </p>
 
-      {/* ── AI Feedback (read-only reference) ── */}
-      {aiFeedback && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
-            {t('aiFeedbackRef')}
-          </p>
-          <FeedbackCard
-            feedback={aiFeedback}
-            preferredLang="en"
-          />
-        </div>
-      )}
+      <form id={formId} onSubmit={handleSubmit} className="space-y-4" noValidate>
 
-      {/* ── Band score inputs ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-        <p className="text-sm font-semibold text-slate-700">{t('bandScores')}</p>
-        <div className="grid grid-cols-2 gap-3">
-          {CRITERIA.map(({ key, label, title }) => (
+        {/* ── Band score inputs ── */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {CRITERIA.map(({ key, label, title }) => (
+              <BandInput
+                key={key}
+                id={`${formId}-${key}`}
+                label={label}
+                title={title}
+                value={bands[key]}
+                onChange={v => handleBandChange(key, v)}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+
+          {/* Overall — auto-calculated, still editable */}
+          <div className="pt-2 border-t border-gray-100">
             <BandInput
-              key={key}
-              id={`${formId}-${key}`}
-              label={label}
-              title={title}
-              value={bands[key]}
-              onChange={v => handleBandChange(key, v)}
+              id={`${formId}-band_overall`}
+              label={t('overall')}
+              title={t('overallTitle')}
+              value={bands.band_overall}
+              onChange={v => handleBandChange('band_overall', v)}
               disabled={disabled}
             />
-          ))}
-        </div>
-
-        {/* Overall — auto-calculated, still editable */}
-        <div className="pt-1 border-t border-slate-100">
-          <BandInput
-            id={`${formId}-band_overall`}
-            label={t('overall')}
-            title={t('overallTitle')}
-            value={bands.band_overall}
-            onChange={v => handleBandChange('band_overall', v)}
-            disabled={disabled}
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            {t('overallHint')}
-          </p>
-        </div>
-      </div>
-
-      {/* ── Feedback text — EN / VI tabs ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-700">{t('feedback')}</p>
-          <div
-            className="inline-flex rounded-lg border border-slate-200 overflow-hidden text-xs font-medium"
-            role="group"
-            aria-label={t('feedbackLangGroup')}
-          >
-            {(['en', 'vi'] as const).map(l => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setActiveLang(l)}
-                aria-pressed={activeLang === l}
-                className={[
-                  'px-3 py-1.5 transition-colors',
-                  activeLang === l
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-white text-slate-600 hover:bg-slate-50',
-                ].join(' ')}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
+            <p className="mt-1 text-[11px] text-gray-400">
+              {t('overallHint')}
+            </p>
           </div>
         </div>
 
-        {/* EN textarea */}
-        <div className={activeLang === 'en' ? 'block' : 'hidden'}>
-          <label htmlFor={`${formId}-feedback_en`} className="sr-only">
-            {t('enFeedbackLabel')}
-          </label>
-          <textarea
-            id={`${formId}-feedback_en`}
-            value={feedbackEn}
-            onChange={e => setFeedbackEn(e.target.value)}
+        {/* ── Feedback text — EN / VI tabs ── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
+              {t('feedback')}
+            </p>
+            <div
+              className="inline-flex gap-1"
+              role="group"
+              aria-label={t('feedbackLangGroup')}
+            >
+              {(['en', 'vi'] as const).map(l => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setActiveLang(l)}
+                  aria-pressed={activeLang === l}
+                  className={[
+                    'px-3 py-1 rounded-md text-[12px] font-medium transition-colors',
+                    activeLang === l
+                      ? 'bg-navy text-white'
+                      : 'border border-gray-200 text-gray-500 hover:border-gray-300',
+                  ].join(' ')}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* EN textarea */}
+          <div className={activeLang === 'en' ? 'block' : 'hidden'}>
+            <label htmlFor={`${formId}-feedback_en`} className="sr-only">
+              {t('enFeedbackLabel')}
+            </label>
+            <textarea
+              id={`${formId}-feedback_en`}
+              value={feedbackEn}
+              onChange={e => setFeedbackEn(e.target.value)}
+              disabled={disabled}
+              placeholder={t('enPlaceholder')}
+              className="w-full min-h-[200px] bg-gray-50 border border-gray-200 rounded-lg p-3 text-[13px] leading-relaxed text-gray-700 placeholder-gray-300 focus:border-teal focus:ring-1 focus:ring-teal focus:outline-none resize-y disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+            <p className="mt-1 text-[11px] text-gray-400 text-right">
+              {t('chars', { count: feedbackEn.length })}
+            </p>
+          </div>
+
+          {/* VI textarea */}
+          <div className={activeLang === 'vi' ? 'block' : 'hidden'}>
+            <label htmlFor={`${formId}-feedback_vi`} className="sr-only">
+              {t('viFeedbackLabel')}
+            </label>
+            <textarea
+              id={`${formId}-feedback_vi`}
+              value={feedbackVi}
+              onChange={e => setFeedbackVi(e.target.value)}
+              disabled={disabled}
+              placeholder="Nhận xét bằng tiếng Việt… (hỗ trợ Markdown)"
+              className="w-full min-h-[200px] bg-gray-50 border border-gray-200 rounded-lg p-3 text-[13px] leading-relaxed text-gray-700 placeholder-gray-300 focus:border-teal focus:ring-1 focus:ring-teal focus:outline-none resize-y disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+            <p className="mt-1 text-[11px] text-gray-400 text-right">
+              {t('chars', { count: feedbackVi.length })}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Error ── */}
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-lg border border-brand-red/20 bg-brand-red-light px-4 py-3 text-[13px] text-brand-red"
+          >
+            <AlertCircle size={15} className="flex-shrink-0 mt-0.5" aria-hidden />
+            {error}
+          </div>
+        )}
+
+        {/* ── Submit ── */}
+        {!isReviewed && (
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full"
             disabled={disabled}
-            placeholder={t('enPlaceholder')}
-            rows={12}
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-800 placeholder-slate-300 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 focus:outline-none resize-y disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-          <p className="mt-1 text-xs text-slate-400 text-right">
-            {t('chars', { count: feedbackEn.length })}
-          </p>
-        </div>
+            isLoading={submitting}
+          >
+            {submitting ? t('submitting') : t('returnToLearner')}
+          </Button>
+        )}
 
-        {/* VI textarea */}
-        <div className={activeLang === 'vi' ? 'block' : 'hidden'}>
-          <label htmlFor={`${formId}-feedback_vi`} className="sr-only">
-            {t('viFeedbackLabel')}
-          </label>
-          <textarea
-            id={`${formId}-feedback_vi`}
-            value={feedbackVi}
-            onChange={e => setFeedbackVi(e.target.value)}
-            disabled={disabled}
-            placeholder="Nhận xét bằng tiếng Việt… (hỗ trợ Markdown)"
-            rows={12}
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-800 placeholder-slate-300 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 focus:outline-none resize-y disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-          <p className="mt-1 text-xs text-slate-400 text-right">
-            {t('chars', { count: feedbackVi.length })}
-          </p>
-        </div>
-      </div>
+        {isReviewed && existingTeacherFeedback && (
+          <div className="flex items-center gap-2 rounded-lg bg-teal-light border border-teal/20 px-4 py-3 text-[13px] text-teal-text">
+            <CheckCircle size={14} aria-hidden />
+            {t('alreadyReviewed')}
+          </div>
+        )}
 
-      {/* ── Error ── */}
-      {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" aria-hidden />
-          {error}
-        </div>
-      )}
-
-      {/* ── Submit ── */}
-      {!isReviewed && (
-        <button
-          type="submit"
-          form={formId}
-          disabled={disabled}
-          className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {submitting
-            ? <><Loader2 size={16} className="animate-spin" aria-hidden /> {t('submitting')}</>
-            : t('returnToLearner')}
-        </button>
-      )}
-
-      {isReviewed && existingTeacherFeedback && (
-        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 flex items-center gap-2">
-          <CheckCircle size={15} aria-hidden />
-          {t('alreadyReviewed')}
-        </div>
-      )}
-    </form>
+      </form>
+    </Card>
   )
 }

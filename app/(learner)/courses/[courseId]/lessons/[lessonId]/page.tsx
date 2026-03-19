@@ -5,10 +5,11 @@ import {
   PlayCircle, BookOpen, PenLine, Video, FileText,
 } from 'lucide-react'
 import { marked } from 'marked'
-import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { LessonCompleteButton } from '@/components/lms/lesson-complete-button'
 import { IeltsWritingForm } from '@/components/lms/IeltsWritingForm'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 import type { Metadata } from 'next'
 import type { FeedbackRow } from '@/lib/validations/submission'
 
@@ -24,6 +25,14 @@ const LESSON_ICONS: Record<string, React.ElementType> = {
   exercise:      PenLine,
   live:          Video,
   ielts_writing: FileText,
+}
+
+const LESSON_TYPE_BADGE: Record<string, 'blue' | 'teal' | 'amber' | 'green' | 'gray'> = {
+  video:         'blue',
+  reading:       'gray',
+  exercise:      'amber',
+  live:          'green',
+  ielts_writing: 'teal',
 }
 
 /** Convert a YouTube / Vimeo watch URL to its embed URL. Returns null for other URLs. */
@@ -179,9 +188,9 @@ export default async function LessonPage({ params }: PageProps) {
     contentHtml = await marked.parse(lesson.content_body)
   }
 
-  const t = await getTranslations()
   const isCompleted = progressRow?.completed ?? false
   const Icon = LESSON_ICONS[lesson.lesson_type] ?? PlayCircle
+  const typeBadgeVariant = LESSON_TYPE_BADGE[lesson.lesson_type] ?? 'gray'
 
   // Prepare IELTS form data when lesson_type = ielts_writing
   const ieltsAssignment = lesson.lesson_type === 'ielts_writing'
@@ -195,76 +204,87 @@ export default async function LessonPage({ params }: PageProps) {
     : null
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-5">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-slate-500 flex-wrap">
-        <Link href="/learner/dashboard" className="hover:text-slate-800 transition-colors">
-          {t('lessons.breadcrumbDashboard')}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[12px] text-gray-400 flex-wrap">
+        <Link href="/dashboard" className="hover:text-gray-700 transition-colors">
+          Dashboard
         </Link>
-        <ChevronRight size={14} className="flex-shrink-0" />
-        <Link href={`/learner/courses/${courseId}`} className="hover:text-slate-800 transition-colors truncate max-w-[140px]">
+        <ChevronRight size={13} className="flex-shrink-0" />
+        <Link href={`/courses/${courseId}`} className="hover:text-gray-700 transition-colors truncate max-w-[140px]">
           {module_.course?.title ?? 'Course'}
         </Link>
-        <ChevronRight size={14} className="flex-shrink-0" />
-        <span className="text-slate-800 font-medium truncate">{lesson.title}</span>
+        <ChevronRight size={13} className="flex-shrink-0" />
+        <span className="text-gray-700 truncate">{lesson.title}</span>
       </nav>
 
       {/* Lesson header */}
       <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Icon size={16} className="text-indigo-500" aria-hidden />
-          <span className="text-xs font-medium text-indigo-600 uppercase tracking-wide">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Icon size={14} className="text-teal" aria-hidden />
+          <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">
             {module_.title}
           </span>
+          <Badge variant={typeBadgeVariant}>{lesson.lesson_type.replace('_', ' ')}</Badge>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">{lesson.title}</h1>
+        <h1 className="font-display text-xl text-gray-900">{lesson.title}</h1>
       </div>
 
       {/* ── Content area ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <Card padding="sm" className="!p-0 overflow-hidden">
         <LessonContent
           lesson={lesson}
           contentHtml={contentHtml}
           ieltsAssignment={ieltsAssignment}
           ieltsSubmission={ieltsSubmission}
           preferredLang={preferredLang}
-          t={t}
         />
-      </div>
+      </Card>
 
       {/* Assignments / submissions — not rendered for ielts_writing (handled inside IeltsWritingForm) */}
       {lesson.lesson_type !== 'ielts_writing' && (assignments ?? []).length > 0 && (
-        <AssignmentsSection assignments={assignments ?? []} t={t} />
+        <AssignmentsSection assignments={assignments ?? []} />
       )}
 
       {/* Mark as complete + Prev/Next navigation */}
-      <footer className="flex items-center justify-between gap-4 pt-2 border-t border-slate-200">
-        {/* Prev */}
-        <div className="flex-1">
-          {prevLesson && (
-            <Link
-              href={`/learner/courses/${courseId}/lessons/${prevLesson.id}`}
-              className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              <ChevronLeft size={16} aria-hidden />
-              <span className="truncate max-w-[160px]">{prevLesson.title}</span>
-            </Link>
-          )}
+      <footer className="pt-4 border-t border-gray-100 space-y-3">
+        {/* Prev/Next — desktop only */}
+        <div className="hidden sm:flex items-center justify-between gap-4">
+          <div className="flex-1">
+            {prevLesson && (
+              <Link
+                href={`/courses/${courseId}/lessons/${prevLesson.id}`}
+                className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-navy transition-colors"
+              >
+                <ChevronLeft size={15} aria-hidden />
+                <span className="truncate max-w-[160px]">{prevLesson.title}</span>
+              </Link>
+            )}
+          </div>
+
+          {/* Mark complete */}
+          <LessonCompleteButton lessonId={lessonId} initialCompleted={isCompleted} />
+
+          <div className="flex-1 flex justify-end">
+            {nextLesson && (
+              <Link
+                href={`/courses/${courseId}/lessons/${nextLesson.id}`}
+                className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-navy transition-colors"
+              >
+                <span className="truncate max-w-[160px]">{nextLesson.title}</span>
+                <Next size={15} aria-hidden />
+              </Link>
+            )}
+          </div>
         </div>
 
-        {/* Mark complete */}
-        <LessonCompleteButton lessonId={lessonId} initialCompleted={isCompleted} />
-
-        {/* Next */}
-        <div className="flex-1 flex justify-end">
-          {nextLesson && (
-            <Link
-              href={`/learner/courses/${courseId}/lessons/${nextLesson.id}`}
-              className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-indigo-600 transition-colors"
-            >
-              <span className="truncate max-w-[160px]">{nextLesson.title}</span>
-              <Next size={16} aria-hidden />
-            </Link>
+        {/* Mobile: mark complete + swipe hint */}
+        <div className="sm:hidden flex flex-col items-center gap-2">
+          <LessonCompleteButton lessonId={lessonId} initialCompleted={isCompleted} />
+          {(prevLesson || nextLesson) && (
+            <p className="text-[11px] text-gray-300">
+              Swipe or use the course outline to navigate lessons
+            </p>
           )}
         </div>
       </footer>
@@ -274,15 +294,12 @@ export default async function LessonPage({ params }: PageProps) {
 
 // ── LessonContent — renders the right UI per lesson_type ─────────────────────
 
-type TAll = Awaited<ReturnType<typeof getTranslations>>
-
 function LessonContent({
   lesson,
   contentHtml,
   ieltsAssignment,
   ieltsSubmission,
   preferredLang,
-  t,
 }: {
   lesson: {
     lesson_type: string
@@ -298,12 +315,11 @@ function LessonContent({
   } | null
   ieltsSubmission: { id: string; status: string; feedback: FeedbackRow[] } | null
   preferredLang: 'en' | 'vi'
-  t: TAll
 }) {
   switch (lesson.lesson_type) {
     case 'video': {
       if (!lesson.content_url) {
-        return <EmptyContent message={t('lessons.noVideo')} />
+        return <EmptyContent message="No video URL has been set for this lesson." />
       }
       const embedUrl = toEmbedUrl(lesson.content_url)
       if (embedUrl) {
@@ -325,22 +341,22 @@ function LessonContent({
           <video
             src={lesson.content_url}
             controls
-            className="w-full rounded-none"
+            className="w-full"
             aria-label="Lesson video"
           />
         )
       }
       // Fallback: link
       return (
-        <div className="p-6">
+        <div className="p-5">
           <a
             href={lesson.content_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:underline"
+            className="inline-flex items-center gap-2 text-sm font-medium text-teal hover:underline"
           >
             <ExternalLink size={15} aria-hidden />
-            {t('lessons.openVideo')}
+            Open video
           </a>
         </div>
       )
@@ -349,11 +365,11 @@ function LessonContent({
     case 'reading':
     case 'exercise': {
       if (!contentHtml) {
-        return <EmptyContent message={t('lessons.noContent')} />
+        return <EmptyContent message="No content has been added for this lesson." />
       }
       return (
         <article
-          className="prose prose-slate max-w-none p-6 sm:p-8"
+          className="prose prose-slate max-w-none p-6"
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
       )
@@ -361,25 +377,25 @@ function LessonContent({
 
     case 'live': {
       return (
-        <div className="p-6 space-y-4">
-          <p className="text-sm text-slate-600">
-            {t('lessons.liveSessionInfo')}
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-600">
+            This is a live session lesson. Join at the scheduled time using the link below.
           </p>
           {lesson.content_url ? (
             <a
               href={lesson.content_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-navy text-white text-sm font-medium hover:bg-navy-hover transition-colors"
             >
               <ExternalLink size={15} aria-hidden />
-              {t('lessons.joinSession')}
+              Join Session
             </a>
           ) : (
-            <p className="text-sm text-slate-400 italic">{t('lessons.noSessionLink')}</p>
+            <p className="text-sm text-gray-400 italic">No session link has been set yet.</p>
           )}
           {lesson.duration_mins && (
-            <p className="text-xs text-slate-500">{t('lessons.duration', { mins: lesson.duration_mins })}</p>
+            <p className="text-[11px] text-gray-400">Duration: {lesson.duration_mins} minutes</p>
           )}
         </div>
       )
@@ -387,7 +403,7 @@ function LessonContent({
 
     case 'ielts_writing': {
       if (!ieltsAssignment) {
-        return <EmptyContent message={t('lessons.noAssignment')} />
+        return <EmptyContent message="No assignment has been configured for this lesson." />
       }
       const rawTask = ieltsAssignment.task_type ?? ''
       const ieltsTask: 'task1' | 'task2' =
@@ -419,20 +435,19 @@ function LessonContent({
     }
 
     default: {
-      return <EmptyContent message={t('lessons.unsupportedType')} />
+      return <EmptyContent message="This lesson type is not yet supported." />
     }
   }
 }
 
 function EmptyContent({ message }: { message: string }) {
   return (
-    <div className="p-6 text-sm text-slate-400 italic">{message}</div>
+    <div className="p-5 text-sm text-gray-400 italic">{message}</div>
   )
 }
 
 // ── AssignmentsSection ────────────────────────────────────────────────────────
 
-// Re-used from lib/validations/submission — duplicated locally to keep server component self-contained
 type LocalFeedbackRow = {
   id: string
   source: string
@@ -464,10 +479,10 @@ type AssignmentRow = {
   submissions: SubmissionRow[]
 }
 
-function AssignmentsSection({ assignments, t }: { assignments: AssignmentRow[]; t: TAll }) {
+function AssignmentsSection({ assignments }: { assignments: AssignmentRow[] }) {
   return (
-    <section className="space-y-4" aria-label={t('lessons.assignments')}>
-      <h2 className="text-base font-semibold text-slate-800">{t('lessons.assignments')}</h2>
+    <section className="space-y-3" aria-label="Assignments">
+      <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">Assignments</p>
       {assignments.map(a => {
         const submission: SubmissionRow | undefined = a.submissions[0]
         const feedback: LocalFeedbackRow | undefined = submission?.feedback[0]
@@ -475,17 +490,17 @@ function AssignmentsSection({ assignments, t }: { assignments: AssignmentRow[]; 
         return (
           <div
             key={a.id}
-            className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3"
+            className="bg-white rounded-lg border border-gray-100 p-5 space-y-3"
           >
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">{a.title}</h3>
+              <h3 className="text-[13px] font-medium text-gray-800">{a.title}</h3>
               {a.instructions && (
-                <p className="mt-1 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">
+                <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
                   {a.instructions}
                 </p>
               )}
               {a.max_words && (
-                <p className="mt-1 text-xs text-slate-400">{t('lessons.maxWords', { max: a.max_words })}</p>
+                <p className="mt-1 text-[11px] text-gray-400">Max words: {a.max_words}</p>
               )}
             </div>
 
@@ -495,57 +510,57 @@ function AssignmentsSection({ assignments, t }: { assignments: AssignmentRow[]; 
                 <div className="flex items-center gap-2">
                   <span
                     className={[
-                      'inline-block text-xs font-medium px-2 py-0.5 rounded-full',
+                      'inline-block text-[10px] font-medium px-2 py-0.5 rounded-full',
                       submission.status === 'reviewed'
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-brand-green-light text-brand-green'
                         : submission.status === 'submitted' || submission.status === 'ai_scored'
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-slate-100 text-slate-500',
+                        ? 'bg-amber-light text-amber'
+                        : 'bg-gray-100 text-gray-500',
                     ].join(' ')}
                   >
                     {submission.status.replace('_', ' ')}
                   </span>
                   {submission.word_count && (
-                    <span className="text-xs text-slate-400">{submission.word_count} words</span>
+                    <span className="text-[11px] text-gray-400">{submission.word_count} words</span>
                   )}
                 </div>
 
                 {/* Feedback summary */}
                 {feedback && (
-                  <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 space-y-2">
+                  <div className="rounded-lg bg-teal-light border border-teal/20 p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-indigo-800 uppercase tracking-wide">
+                      <p className="text-[10px] font-medium text-teal-text uppercase tracking-wide">
                         Feedback · {feedback.source}
                       </p>
                       {feedback.band_overall != null && (
-                        <span className="text-lg font-bold text-indigo-700">
-                          {t('feedback.bandLabel', { score: feedback.band_overall })}
+                        <span className="font-display text-lg text-navy">
+                          Band {feedback.band_overall}
                         </span>
                       )}
                     </div>
                     {feedback.strengths && (
                       <div>
-                        <p className="text-xs font-medium text-slate-500">{t('lessons.strengths')}</p>
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{feedback.strengths}</p>
+                        <p className="text-[11px] font-medium text-gray-500">Strengths</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.strengths}</p>
                       </div>
                     )}
                     {feedback.improvements && (
                       <div>
-                        <p className="text-xs font-medium text-slate-500">{t('lessons.areasToImprove')}</p>
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{feedback.improvements}</p>
+                        <p className="text-[11px] font-medium text-gray-500">Areas to improve</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.improvements}</p>
                       </div>
                     )}
                     {feedback.detailed_notes && (
                       <div>
-                        <p className="text-xs font-medium text-slate-500">{t('lessons.detailedNotes')}</p>
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{feedback.detailed_notes}</p>
+                        <p className="text-[11px] font-medium text-gray-500">Detailed notes</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{feedback.detailed_notes}</p>
                       </div>
                     )}
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic">{t('lessons.noSubmission')}</p>
+              <p className="text-[11px] text-gray-400 italic">No submission yet.</p>
             )}
           </div>
         )

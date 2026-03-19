@@ -16,33 +16,36 @@ export default async function AdminCoursesPage() {
 
   if (error) {
     return (
-      <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+      <div role="alert" className="rounded-lg bg-brand-red-light border border-brand-red/20 px-4 py-3 text-sm text-brand-red">
         Failed to load courses: {error.message}
       </div>
     )
   }
 
+  const typedCourses = courses as Course[]
+  const published = typedCourses.filter(c => c.is_published).length
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Courses</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {courses.length} course{courses.length !== 1 ? 's' : ''} total
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <h1 className="font-display text-2xl text-gray-900">Courses</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {published} course{published !== 1 ? 's' : ''} published
           </p>
         </div>
         <Link
           href="/admin/courses/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-hover transition-colors"
         >
-          <Plus size={16} aria-hidden="true" />
-          New course
+          <Plus size={15} aria-hidden />
+          New Course
         </Link>
       </div>
 
       {/* Table */}
-      <CourseTable courses={courses as Course[]} />
+      <CourseTable courses={typedCourses} />
     </div>
   )
 }

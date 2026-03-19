@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { NewClassModal } from './new-class-modal'
 import type { ClassRow } from '@/lib/validations/class'
 
@@ -27,7 +28,7 @@ function enrolCount(row: ClassRow): number {
 
 export function ClassList({ initialClasses }: ClassListProps) {
   const router = useRouter()
-  const [classes, setClasses]     = useState<ClassRow[]>(initialClasses)
+  const [classes,   setClasses]   = useState<ClassRow[]>(initialClasses)
   const [showModal, setShowModal] = useState(false)
 
   function handleCreated(row: ClassRow) {
@@ -42,56 +43,67 @@ export function ClassList({ initialClasses }: ClassListProps) {
 
   return (
     <>
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Classes</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+      {/* ── Header ── */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <h1 className="font-display text-2xl text-gray-900">Classes</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
             {classes.length} class{classes.length !== 1 ? 'es' : ''} total
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-hover transition-colors"
           aria-label="Create new class"
         >
-          <Plus size={16} aria-hidden="true" />
-          New class
+          <Plus size={15} aria-hidden />
+          New Class
         </button>
       </div>
 
-      {/* ── Table ───────────────────────────────────────────────────── */}
+      {/* ── Table ── */}
       {classes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 py-16 text-center text-slate-500">
-          <p className="text-sm">No classes yet.</p>
+        <div className="rounded-lg border border-dashed border-gray-200 bg-white py-12 text-center">
+          <Users size={32} className="mx-auto text-gray-300 mb-3" aria-hidden />
+          <p className="text-sm font-medium text-gray-500">Nothing here yet</p>
+          <p className="text-[13px] text-gray-400 mt-1">No classes have been created.</p>
           <button
             onClick={() => setShowModal(true)}
-            className="mt-3 text-sm font-medium text-indigo-600 hover:underline"
+            className="mt-3 text-[13px] font-medium text-teal hover:text-teal-text transition-colors"
           >
             Create your first class →
           </button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
+        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
               <tr>
-                {['Name', 'Course', 'Branch', 'Teacher', 'Learners', 'Dates', 'Status'].map(h => (
+                {[
+                  { label: 'Name',    hide: false },
+                  { label: 'Course',  hide: false },
+                  { label: 'Branch',  hide: true  },
+                  { label: 'Teacher', hide: true  },
+                  { label: 'Learners',hide: false },
+                  { label: 'Dates',   hide: true  },
+                  { label: 'Status',  hide: false },
+                ].map(({ label, hide }) => (
                   <th
-                    key={h}
+                    key={label}
                     scope="col"
-                    className={`px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide ${
-                      ['Branch', 'Teacher', 'Dates'].includes(h) ? 'hidden md:table-cell' : ''
-                    }`}
+                    className={[
+                      'px-5 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-gray-400',
+                      hide ? 'hidden md:table-cell' : '',
+                    ].join(' ')}
                   >
-                    {h}
+                    {label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {classes.map(cls => (
-                <ClassRow
+                <ClassRowItem
                   key={cls.id}
                   cls={cls}
                   onClick={() => handleRowClick(cls.id)}
@@ -102,7 +114,7 @@ export function ClassList({ initialClasses }: ClassListProps) {
         </div>
       )}
 
-      {/* ── Modal ───────────────────────────────────────────────────── */}
+      {/* ── Modal ── */}
       {showModal && (
         <NewClassModal
           onClose={() => setShowModal(false)}
@@ -113,9 +125,9 @@ export function ClassList({ initialClasses }: ClassListProps) {
   )
 }
 
-// ── ClassRow ─────────────────────────────────────────────────────────────────
+// ── ClassRowItem ──────────────────────────────────────────────────────────────
 
-function ClassRow({ cls, onClick }: { cls: ClassRow; onClick: () => void }) {
+function ClassRowItem({ cls, onClick }: { cls: ClassRow; onClick: () => void }) {
   const count = enrolCount(cls)
 
   return (
@@ -125,62 +137,56 @@ function ClassRow({ cls, onClick }: { cls: ClassRow; onClick: () => void }) {
       tabIndex={0}
       role="button"
       aria-label={`View class ${cls.name}`}
-      className="hover:bg-slate-50 cursor-pointer transition-colors focus:outline-none focus:bg-slate-50"
+      className="border-t border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors focus:outline-none focus:bg-gray-50"
     >
       {/* Name */}
-      <td className="px-4 py-3.5">
-        <p className="font-medium text-slate-900">{cls.name}</p>
+      <td className="px-5 py-4">
+        <p className="font-medium text-gray-900 text-sm">{cls.name}</p>
       </td>
 
       {/* Course */}
-      <td className="px-4 py-3.5">
-        <p className="text-slate-700 line-clamp-1">
-          {cls.course?.title ?? <span className="text-slate-400">—</span>}
+      <td className="px-5 py-4">
+        <p className="text-[13px] text-gray-600 line-clamp-1">
+          {cls.course?.title ?? <span className="text-gray-300">—</span>}
         </p>
       </td>
 
-      {/* Branch (hidden on mobile) */}
-      <td className="hidden md:table-cell px-4 py-3.5 text-slate-600">
-        {cls.branch ? `${cls.branch.name} · ${cls.branch.city}` : <span className="text-slate-400">Online</span>}
+      {/* Branch */}
+      <td className="hidden md:table-cell px-5 py-4 text-[13px] text-gray-500">
+        {cls.branch
+          ? `${cls.branch.name} · ${cls.branch.city}`
+          : <span className="text-gray-300">Online</span>}
       </td>
 
-      {/* Teacher (hidden on mobile) */}
-      <td className="hidden md:table-cell px-4 py-3.5 text-slate-600">
-        {cls.teacher?.full_name ?? <span className="text-slate-400">Unassigned</span>}
+      {/* Teacher */}
+      <td className="hidden md:table-cell px-5 py-4 text-[13px] text-gray-500">
+        {cls.teacher?.full_name ?? <span className="text-gray-300">Unassigned</span>}
       </td>
 
       {/* Learners */}
-      <td className="px-4 py-3.5">
-        <span className="text-slate-700 tabular-nums">
+      <td className="px-5 py-4">
+        <span className="text-[13px] text-gray-700 tabular-nums">
           {count}
           {cls.max_learners != null && (
-            <span className="text-slate-400"> / {cls.max_learners}</span>
+            <span className="text-gray-400"> / {cls.max_learners}</span>
           )}
         </span>
         {cls.max_learners != null && count >= cls.max_learners && (
-          <span className="ml-1.5 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
-            Full
-          </span>
+          <Badge variant="red" className="ml-1.5">Full</Badge>
         )}
       </td>
 
-      {/* Date range (hidden on mobile) */}
-      <td className="hidden md:table-cell px-4 py-3.5 text-slate-600 whitespace-nowrap">
+      {/* Dates */}
+      <td className="hidden md:table-cell px-5 py-4 text-[13px] text-gray-500 whitespace-nowrap">
         {fmtDate(cls.starts_on)}
         {cls.ends_on && <> — {fmtDate(cls.ends_on)}</>}
       </td>
 
-      {/* Status badge */}
-      <td className="px-4 py-3.5">
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            cls.is_active
-              ? 'bg-green-100 text-green-700'
-              : 'bg-slate-100 text-slate-500'
-          }`}
-        >
-          {cls.is_active ? 'Active' : 'Inactive'}
-        </span>
+      {/* Status */}
+      <td className="px-5 py-4">
+        {cls.is_active
+          ? <Badge variant="teal">Active</Badge>
+          : <Badge variant="gray">Inactive</Badge>}
       </td>
     </tr>
   )

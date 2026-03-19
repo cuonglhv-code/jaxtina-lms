@@ -68,11 +68,11 @@ export function LessonCompleteButton({
       disabled={completed || loading}
       aria-label={completed ? t('completed') : t('markComplete')}
       className={[
-        'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium',
+        'inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium',
         'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         completed
-          ? 'bg-green-50 text-green-700 border border-green-200 cursor-default focus-visible:ring-green-500'
-          : 'bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-500',
+          ? 'bg-teal-light text-teal-text border border-teal cursor-default focus-visible:ring-teal'
+          : 'bg-navy text-white hover:bg-navy-hover focus-visible:ring-navy',
         loading ? 'opacity-70 cursor-wait' : '',
       ]
         .filter(Boolean)

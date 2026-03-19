@@ -1,75 +1,103 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { BookOpen, Clock, MessageSquare, ArrowRight } from 'lucide-react'
-import { getTranslations } from 'next-intl/server'
-import { createClient } from '@/lib/supabase/server'
-import { CourseProgressCard } from '@/components/lms/CourseProgressCard'
 import type { Metadata } from 'next'
+import { BookOpen } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { Badge }              from '@/components/ui/Badge'
+import { Card }               from '@/components/ui/Card'
+import { CourseProgressCard } from '@/components/lms/CourseProgressCard'
 
 export const metadata: Metadata = { title: 'Dashboard — Jaxtina EduOS' }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface CourseProgress {
-  enrolment_id: string
-  class_id: string
-  course_id: string
-  course_title: string
-  course_title_vi: string | null
-  class_name: string
-  thumbnail_url: string | null
-  level: string | null
-  completion_pct: number
+  enrolment_id:     string
+  course_id:        string
+  course_title:     string
+  class_name:       string
+  level:            string | null
+  thumbnail_url:    string | null
+  completion_pct:   number
   enrolment_status: string
-  starts_on: string
-  ends_on: string | null
+  starts_on:        string
+  ends_on:          string | null
 }
 
-interface RecentActivity {
-  id: string
+interface ActivityRow {
+  id:             string
   last_viewed_at: string
-  completed: boolean
-  progress_pct: number
+  completed:      boolean
+  progress_pct:   number
   lesson: {
-    title: string
-    module: {
-      title: string
-      course: {
-        title: string
-      } | null
-    } | null
+    title:       string
+    lesson_type: string
   } | null
+  module_title:  string | null
+  course_title:  string | null
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function sectionLabel(text: string) {
+  return (
+    <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-3.5 mt-6 first:mt-0">
+      {text}
+    </p>
+  )
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1)   return 'just now'
+  if (mins < 60)  return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)   return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7)   return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+const LESSON_TYPE_BG: Record<string, string> = {
+  ielts_writing: 'bg-teal-light',
+  video:         'bg-brand-blue-light',
+  reading:       'bg-gray-100',
+  exercise:      'bg-amber-light',
+  live:          'bg-brand-green-light',
+}
+
+const LESSON_TYPE_LABEL: Record<string, string> = {
+  ielts_writing: 'Writing',
+  video:         'Video',
+  reading:       'Reading',
+  exercise:      'Exercise',
+  live:          'Live',
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function LearnerDashboardPage() {
-  const t        = await getTranslations('dashboard')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profileRaw } = await supabase
-    .from('user_profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
-
-  const profile = profileRaw as { full_name: string | null } | null
-  const firstName = profile?.full_name?.split(' ').at(-1) ?? profile?.full_name ?? 'there'
-
-  // ── Parallel data fetches ──────────────────────────────────────────────────
-
   const [
+    { data: profileRaw },
     { data: courseProgressRows },
     { data: recentRows },
     { count: pendingCount },
+    { data: feedbackRows },
+    { count: completedCount },
   ] = await Promise.all([
-    // a) Active enrolments with course completion from the view
+    // a) Profile
+    supabase
+      .from('user_profiles')
+      .select('full_name, preferred_lang')
+      .eq('id', user.id)
+      .single(),
+
+    // b) Active enrolments with course progress
     supabase
       .from('v_learner_course_progress')
       .select('*')
@@ -77,165 +105,158 @@ export default async function LearnerDashboardPage() {
       .eq('enrolment_status', 'active')
       .order('starts_on', { ascending: true }),
 
-    // b) Last 5 lesson interactions
+    // c) Last 5 lesson interactions
     supabase
       .from('learner_progress')
       .select(`
         id, last_viewed_at, completed, progress_pct,
-        lesson:lessons!lesson_id(
-          title,
-          module:modules!module_id(
-            title,
-            course:courses!course_id(title)
-          )
-        )
+        lesson:lessons!lesson_id( title, lesson_type )
       `)
       .eq('learner_id', user.id)
       .order('last_viewed_at', { ascending: false })
       .limit(5),
 
-    // c) Pending feedback count (submitted or AI-scored, awaiting teacher review)
+    // d) Pending feedback count
     supabase
       .from('submissions')
       .select('id', { count: 'exact', head: true })
       .eq('learner_id', user.id)
       .in('status', ['submitted', 'ai_scored']),
+
+    // e) Latest band score from feedback
+    supabase
+      .from('feedback')
+      .select('band_overall, submissions!submission_id(learner_id)')
+      .eq('submissions.learner_id', user.id)
+      .not('band_overall', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1),
+
+    // f) Lessons completed count
+    supabase
+      .from('learner_progress')
+      .select('id', { count: 'exact', head: true })
+      .eq('learner_id', user.id)
+      .eq('completed', true),
   ])
 
-  const courses  = (courseProgressRows ?? []) as CourseProgress[]
-  const activity = (recentRows ?? []) as RecentActivity[]
+  const profile     = profileRaw  as { full_name: string | null; preferred_lang: string | null } | null
+  const courses     = (courseProgressRows ?? []) as CourseProgress[]
+  const activity    = (recentRows    ?? []) as ActivityRow[]
+  const feedback    = (feedbackRows  ?? []) as { band_overall: number | null }[]
+
+  const firstName   = profile?.full_name?.split(' ').at(0) ?? 'there'
+  const avgCompletion = courses.length
+    ? Math.round(courses.reduce((sum, c) => sum + c.completion_pct, 0) / courses.length)
+    : 0
+  const latestBand  = feedback[0]?.band_overall ?? null
+  const lessonsCompleted = completedCount ?? 0
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="space-y-10">
+    <div className="max-w-3xl">
 
-      {/* ── Welcome heading ── */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {t('welcomeBack', { name: firstName })}
+          <h1 className="font-display text-xl text-gray-900">
+            {greeting}, {firstName}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {t('subtitle')}
+          <p className="text-sm text-gray-400 mt-1">
+            {courses.length > 0
+              ? `You have ${courses.length} active course${courses.length > 1 ? 's' : ''}`
+              : 'No active courses yet'}
           </p>
         </div>
-
-        {/* Pending feedback badge */}
         {(pendingCount ?? 0) > 0 && (
-          <Link
-            href="/learner/submissions"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
-          >
-            <MessageSquare size={15} aria-hidden />
-            {t('pendingFeedback', { count: pendingCount ?? 0 })}
-            <ArrowRight size={13} aria-hidden />
-          </Link>
+          <Badge variant="amber">
+            {pendingCount} feedback pending
+          </Badge>
         )}
       </div>
 
-      {/* ── My Courses ── */}
-      <section aria-labelledby="courses-heading">
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="courses-heading" className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <BookOpen size={18} className="text-indigo-500" aria-hidden />
-            {t('myCourses')}
-          </h2>
-          <Link
-            href="/learner/courses"
-            className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-          >
-            {t('viewAll')}
-          </Link>
-        </div>
+      {/* ── Stats row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
+        <Card padding="md">
+          <p className="font-display text-2xl text-gray-900">{avgCompletion}%</p>
+          <p className="text-[11px] text-gray-400 mt-1">Overall progress</p>
+        </Card>
+        <Card padding="md">
+          <p className="font-display text-2xl text-gray-900">
+            {latestBand !== null ? latestBand.toFixed(1) : '—'}
+          </p>
+          <p className="text-[11px] text-gray-400 mt-1">Latest band score</p>
+        </Card>
+        <Card padding="md">
+          <p className="font-display text-2xl text-gray-900">{lessonsCompleted}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Lessons completed</p>
+        </Card>
+      </div>
 
-        {courses.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-            <BookOpen size={28} className="mx-auto text-slate-300 mb-2" aria-hidden />
-            <p className="text-sm text-slate-500">{t('noEnrolments')}</p>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map(row => (
-              <CourseProgressCard
-                key={row.enrolment_id}
-                title={row.course_title}
-                className={row.class_name}
-                completionPct={row.completion_pct}
-                continueHref={`/learner/courses/${row.course_id}`}
-                thumbnailUrl={row.thumbnail_url}
-                level={row.level}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* ── My Courses ── */}
+      {sectionLabel('My courses')}
+
+      {courses.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-200 bg-white px-6 py-12 text-center">
+          <BookOpen size={32} className="mx-auto text-gray-300 mb-3" aria-hidden />
+          <p className="text-sm font-medium text-gray-500">Nothing here yet</p>
+          <p className="text-[13px] text-gray-400 mt-1">No active courses. Ask your teacher to enrol you.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {courses.map(row => (
+            <CourseProgressCard
+              key={row.enrolment_id}
+              title={row.course_title}
+              className={row.class_name}
+              completionPct={row.completion_pct}
+              continueHref={`/courses/${row.course_id}`}
+              level={row.level}
+            />
+          ))}
+        </div>
+      )}
 
       {/* ── Recent Activity ── */}
       {activity.length > 0 && (
-        <section aria-labelledby="activity-heading">
-          <h2 id="activity-heading" className="text-lg font-semibold text-slate-800 flex items-center gap-2 mb-4">
-            <Clock size={18} className="text-indigo-500" aria-hidden />
-            {t('recentActivity')}
-          </h2>
-
-          <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-sm">
+        <>
+          {sectionLabel('Recent activity')}
+          <Card padding="sm" className="divide-y divide-gray-50 !p-0 overflow-hidden">
             {activity.map(row => {
-              const courseName = row.lesson?.module?.course?.title ?? '—'
-              const moduleName = row.lesson?.module?.title ?? '—'
-              const lessonName = row.lesson?.title ?? 'Untitled lesson'
-              const relativeTime = formatRelativeTime(row.last_viewed_at, t)
+              const lessonType = row.lesson?.lesson_type ?? 'video'
+              const iconBg     = LESSON_TYPE_BG[lessonType]    ?? 'bg-gray-100'
+              const typeLabel  = LESSON_TYPE_LABEL[lessonType] ?? lessonType
+              const status     = row.completed ? 'completed' : 'in-progress'
 
               return (
-                <div
-                  key={row.id}
-                  className="flex items-center gap-4 px-5 py-3.5"
-                >
-                  {/* Completion indicator */}
-                  <span
-                    aria-label={row.completed ? 'Completed' : `${row.progress_pct}% complete`}
-                    className={[
-                      'flex-shrink-0 w-2 h-2 rounded-full',
-                      row.completed ? 'bg-green-500' : 'bg-indigo-300',
-                    ].join(' ')}
+                <div key={row.id} className="flex items-center gap-3 py-3 px-4">
+                  {/* Type icon */}
+                  <div
+                    aria-hidden
+                    className={['w-8 h-8 rounded-lg flex-shrink-0', iconBg].join(' ')}
                   />
 
+                  {/* Text */}
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-800 truncate">{lessonName}</p>
-                    <p className="text-xs text-slate-400 truncate">
-                      {courseName} · {moduleName}
+                    <p className="text-[13px] text-gray-800 truncate">
+                      {row.lesson?.title ?? 'Untitled lesson'}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {typeLabel} · {timeAgo(row.last_viewed_at)}
                     </p>
                   </div>
 
-                  <span className="flex-shrink-0 text-xs text-slate-400 whitespace-nowrap">
-                    {relativeTime}
-                  </span>
+                  {/* Status badge */}
+                  <Badge variant={row.completed ? 'green' : 'gray'}>
+                    {status}
+                  </Badge>
                 </div>
               )
             })}
-          </div>
-        </section>
+          </Card>
+        </>
       )}
     </div>
   )
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-type TDashboard = Awaited<ReturnType<typeof getTranslations<'dashboard'>>>
-
-function formatRelativeTime(isoString: string, t: TDashboard): string {
-  const diffMs = Date.now() - new Date(isoString).getTime()
-  const diffMins = Math.floor(diffMs / 60_000)
-
-  if (diffMins < 1)   return t('justNow')
-  if (diffMins < 60)  return t('minutesAgo', { count: diffMins })
-
-  const diffHrs = Math.floor(diffMins / 60)
-  if (diffHrs < 24)   return t('hoursAgo', { count: diffHrs })
-
-  const diffDays = Math.floor(diffHrs / 24)
-  if (diffDays < 7)   return t('daysAgo', { count: diffDays })
-
-  return new Date(isoString).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short',
-  })
 }

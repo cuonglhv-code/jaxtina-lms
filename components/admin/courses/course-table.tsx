@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Pencil, Trash2, Loader2 } from 'lucide-react'
+import { BookOpen, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import type { Course } from '@/lib/validations/course'
 
 interface CourseTableProps {
@@ -12,7 +13,7 @@ interface CourseTableProps {
 
 export function CourseTable({ courses }: CourseTableProps) {
   const router = useRouter()
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [deleting,  setDeleting]  = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
@@ -20,19 +21,18 @@ export function CourseTable({ courses }: CourseTableProps) {
     const res = await fetch(`/api/courses/${id}`, { method: 'DELETE' })
     setDeleting(null)
     setConfirmId(null)
-
-    if (res.ok) {
-      router.refresh()
-    }
+    if (res.ok) router.refresh()
   }
 
   if (courses.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 py-16 text-center text-slate-500">
-        <p className="text-sm">No courses yet.</p>
+      <div className="rounded-lg border border-dashed border-gray-200 bg-white py-12 text-center">
+        <BookOpen size={32} className="mx-auto text-gray-300 mb-3" aria-hidden />
+        <p className="text-sm font-medium text-gray-500">Nothing here yet</p>
+        <p className="text-[13px] text-gray-400 mt-1">No courses have been created.</p>
         <Link
           href="/admin/courses/new"
-          className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline"
+          className="mt-3 inline-block text-[13px] font-medium text-teal hover:text-teal-text transition-colors"
         >
           Create your first course →
         </Link>
@@ -42,7 +42,7 @@ export function CourseTable({ courses }: CourseTableProps) {
 
   return (
     <>
-      {/* Delete confirmation dialog */}
+      {/* ── Delete confirmation dialog ── */}
       {confirmId && (
         <div
           role="dialog"
@@ -50,27 +50,27 @@ export function CourseTable({ courses }: CourseTableProps) {
           aria-labelledby="confirm-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
         >
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h2 id="confirm-title" className="text-base font-semibold text-slate-900">
+          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl border border-gray-100">
+            <h2 id="confirm-title" className="text-[15px] font-medium text-gray-900">
               Delete course?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-gray-500">
               This action cannot be undone. Associated modules and lessons will also be removed.
             </p>
-            <div className="mt-5 flex justify-end gap-3">
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setConfirmId(null)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(confirmId)}
                 disabled={!!deleting}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-md bg-brand-red px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60 transition-opacity"
               >
                 {deleting === confirmId && (
-                  <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                  <Loader2 size={14} className="animate-spin" aria-hidden />
                 )}
                 Delete
               </button>
@@ -79,55 +79,75 @@ export function CourseTable({ courses }: CourseTableProps) {
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+      {/* ── Table ── */}
+      <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left font-semibold text-slate-600">
-                Title
-              </th>
-              <th scope="col" className="hidden px-6 py-3 text-left font-semibold text-slate-600 sm:table-cell">
-                Level
-              </th>
-              <th scope="col" className="px-6 py-3 text-left font-semibold text-slate-600">
-                Status
-              </th>
-              <th scope="col" className="px-6 py-3 text-right font-semibold text-slate-600">
-                Actions
-              </th>
+              {['Title', 'Level', 'Status', 'Modules', 'Actions'].map((h, i) => (
+                <th
+                  key={h}
+                  scope="col"
+                  className={[
+                    'px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-gray-400',
+                    i === 4 ? 'text-right' : 'text-left',
+                    h === 'Level' ? 'hidden sm:table-cell' : '',
+                  ].join(' ')}
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {courses.map(course => (
-              <tr key={course.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-medium text-slate-900 line-clamp-1">{course.title}</p>
+              <tr
+                key={course.id}
+                className="border-t border-gray-50 hover:bg-gray-50/50 transition-colors"
+              >
+                {/* Title */}
+                <td className="px-5 py-4">
+                  <p className="font-medium text-gray-900 text-sm line-clamp-1">{course.title}</p>
                   {course.title_vi && (
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{course.title_vi}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{course.title_vi}</p>
                   )}
                 </td>
-                <td className="hidden px-6 py-4 text-slate-600 sm:table-cell">
-                  {course.level ?? <span className="text-slate-400">—</span>}
+
+                {/* Level */}
+                <td className="hidden sm:table-cell px-5 py-4">
+                  {course.level
+                    ? <Badge variant="gray">{course.level}</Badge>
+                    : <span className="text-gray-300">—</span>}
                 </td>
-                <td className="px-6 py-4">
-                  <StatusBadge published={course.is_published} />
+
+                {/* Status */}
+                <td className="px-5 py-4">
+                  {course.is_published
+                    ? <Badge variant="teal">Published</Badge>
+                    : <Badge variant="gray">Draft</Badge>}
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
+
+                {/* Modules */}
+                <td className="px-5 py-4">
+                  <span className="text-[13px] text-gray-400">—</span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-5 py-4">
+                  <div className="flex items-center justify-end gap-1">
                     <Link
                       href={`/admin/courses/${course.id}/edit`}
                       aria-label={`Edit ${course.title}`}
-                      className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                      className="rounded-md p-1.5 text-gray-400 hover:text-navy hover:bg-gray-100 transition-colors"
                     >
-                      <Pencil size={16} aria-hidden="true" />
+                      <Pencil size={15} aria-hidden />
                     </Link>
                     <button
                       onClick={() => setConfirmId(course.id)}
                       aria-label={`Delete ${course.title}`}
-                      className="rounded-md p-2 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      className="rounded-md p-1.5 text-gray-400 hover:text-brand-red hover:bg-brand-red-light transition-colors"
                     >
-                      <Trash2 size={16} aria-hidden="true" />
+                      <Trash2 size={15} aria-hidden />
                     </button>
                   </div>
                 </td>
@@ -137,19 +157,5 @@ export function CourseTable({ courses }: CourseTableProps) {
         </table>
       </div>
     </>
-  )
-}
-
-function StatusBadge({ published }: { published: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        published
-          ? 'bg-green-100 text-green-700'
-          : 'bg-amber-100 text-amber-700'
-      }`}
-    >
-      {published ? 'Published' : 'Draft'}
-    </span>
   )
 }

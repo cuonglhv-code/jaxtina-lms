@@ -1,42 +1,31 @@
 import { redirect } from 'next/navigation'
+import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { LearnerNav } from '@/components/lms/learner-nav'
+import { LearnerSidebar } from './_components/LearnerSidebar'
 
-export default async function LearnerLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function LearnerLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { data: profileRaw, error } = await supabase
     .from('user_profiles')
-    .select('full_name, preferred_lang')
+    .select('full_name, role')
     .eq('id', user.id)
     .single()
 
-  if (error || !profileRaw) {
-    redirect('/login')
-  }
+  if (error || !profileRaw) redirect('/login')
 
-  const profile = profileRaw as { full_name: string | null; preferred_lang: string | null }
+  const profile = profileRaw as { full_name: string | null; role: string }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <LearnerNav
-        fullName={profile.full_name ?? ''}
-        preferredLang={profile.preferred_lang as 'en' | 'vi'}
-        userId={user.id}
-      />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="main-content">
+    <div className="min-h-screen">
+      <LearnerSidebar fullName={profile.full_name ?? ''} role={profile.role} />
+      <main
+        id="main-content"
+        className="ml-0 md:ml-[200px] min-h-screen bg-gray-50 p-6 md:p-7 pb-20 md:pb-7"
+      >
         {children}
       </main>
     </div>

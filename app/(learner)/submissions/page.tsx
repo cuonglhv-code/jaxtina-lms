@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { FileText, ChevronRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
+import { Badge } from '@/components/ui'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'My Submissions — Jaxtina EduOS' }
@@ -39,15 +40,13 @@ interface SubmissionRow {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<string, string> = {
-  draft:        'bg-slate-100 text-slate-500',
-  submitted:    'bg-blue-100 text-blue-700',
-  ai_scored:    'bg-amber-100 text-amber-700',
-  under_review: 'bg-purple-100 text-purple-700',
-  reviewed:     'bg-green-100 text-green-700',
+const STATUS_BADGE: Record<string, 'gray' | 'blue' | 'amber' | 'teal' | 'green'> = {
+  draft:        'gray',
+  submitted:    'blue',
+  ai_scored:    'amber',
+  under_review: 'teal',
+  reviewed:     'green',
 }
-
-// STATUS_LABELS built from translations inside the page component
 
 function formatIeltsTask(taskType: string | null, lessonTaskType: string | null): string {
   const raw = taskType ?? lessonTaskType ?? ''
@@ -64,10 +63,10 @@ function formatDate(iso: string | null): string {
 }
 
 function bandColor(score: number | null): string {
-  if (score == null) return 'text-slate-400'
-  if (score < 5.5)   return 'text-red-600'
-  if (score <= 6.5)  return 'text-amber-600'
-  return 'text-green-600'
+  if (score == null) return 'text-gray-400'
+  if (score < 5.5)   return 'text-brand-red font-medium'
+  if (score <= 6.5)  return 'text-amber font-medium'
+  return 'text-teal-text font-medium'
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -84,10 +83,7 @@ export default async function SubmissionsPage() {
     reviewed:     t('statusReviewed'),
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const { data, error } = await supabase
@@ -114,7 +110,7 @@ export default async function SubmissionsPage() {
     return (
       <div
         role="alert"
-        className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"
+        className="rounded-lg bg-brand-red-light border border-brand-red/20 px-4 py-3 text-sm text-brand-red"
       >
         {t('failedLoad', { message: error.message })}
       </div>
@@ -124,30 +120,29 @@ export default async function SubmissionsPage() {
   const submissions = (data ?? []) as SubmissionRow[]
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-5 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {t('subtitle')}
-        </p>
+        <h1 className="font-display text-2xl text-gray-900">{t('title')}</h1>
+        <p className="mt-0.5 text-sm text-gray-400">{t('subtitle')}</p>
       </div>
 
       {submissions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-          <FileText size={28} className="mx-auto text-slate-300 mb-2" aria-hidden />
-          <p className="text-sm text-slate-500">{t('noSubmissions')}</p>
+        <div className="rounded-lg border border-dashed border-gray-200 bg-white px-6 py-12 text-center">
+          <FileText size={32} className="mx-auto text-gray-300 mb-3" aria-hidden />
+          <p className="text-sm font-medium text-gray-500">Nothing here yet</p>
+          <p className="text-[13px] text-gray-400 mt-1">{t('noSubmissions')}</p>
           <Link
-            href="/learner/courses"
-            className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline"
+            href="/courses"
+            className="mt-3 inline-block text-[13px] font-medium text-teal hover:text-teal-text transition-colors"
           >
             {t('browseCourses')}
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-x-4 px-5 py-3 border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-500 uppercase tracking-wide">
+          <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-x-4 px-5 py-3 border-b border-gray-100 bg-gray-50 text-[11px] font-medium text-gray-400 uppercase tracking-wider">
             <span>{t('assignment')}</span>
             <span>{t('task')}</span>
             <span>{t('words')}</span>
@@ -156,19 +151,17 @@ export default async function SubmissionsPage() {
             <span>{t('band')}</span>
           </div>
 
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-gray-50">
             {submissions.map(sub => {
               const assignment = sub.assignment
               const lesson     = assignment?.lesson
               const course     = lesson?.module?.course
 
-              // Reconstruct lesson URL: /learner/courses/{courseId}/lessons/{lessonId}
               const lessonHref =
                 course && lesson
-                  ? `/learner/courses/${course.id}/lessons/${lesson.id}`
-                  : '/learner/courses'
+                  ? `/courses/${course.id}/lessons/${lesson.id}`
+                  : '/courses'
 
-              // Most recent feedback (teacher first if multiple)
               const teacherFb = sub.feedback.find(f => f.source === 'teacher')
               const bestFb    = teacherFb ?? sub.feedback[0] ?? null
 
@@ -177,58 +170,55 @@ export default async function SubmissionsPage() {
                 lesson?.ielts_task_type ?? null
               )
 
+              const badgeVariant = STATUS_BADGE[sub.status] ?? 'gray'
+
               return (
                 <li key={sub.id}>
                   <Link
                     href={lessonHref}
-                    className="grid sm:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-x-4 gap-y-1 items-center px-5 py-4 hover:bg-indigo-50 transition-colors group"
+                    className="grid sm:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-x-4 gap-y-1 items-center px-5 py-4 hover:bg-gray-50 transition-colors group"
                   >
                     {/* Assignment + course */}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800 group-hover:text-indigo-700 transition-colors truncate">
+                      <p className="text-[13px] font-medium text-gray-800 group-hover:text-navy transition-colors truncate">
                         {assignment?.title ?? 'Untitled'}
                       </p>
                       {course && (
-                        <p className="text-xs text-slate-400 truncate mt-0.5">{course.title}</p>
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{course.title}</p>
                       )}
                     </div>
 
                     {/* IELTS task */}
-                    <span className="text-xs font-medium text-slate-500 whitespace-nowrap sm:text-right">
+                    <span className="text-[12px] text-gray-500 whitespace-nowrap sm:text-right">
                       {taskLabel}
                     </span>
 
                     {/* Word count */}
-                    <span className="text-xs text-slate-400 whitespace-nowrap sm:text-right">
+                    <span className="text-[12px] text-gray-400 whitespace-nowrap tabular-nums sm:text-right">
                       {sub.word_count != null ? `${sub.word_count}w` : '—'}
                     </span>
 
                     {/* Submitted date */}
-                    <span className="text-xs text-slate-400 whitespace-nowrap sm:text-right">
+                    <span className="text-[12px] text-gray-400 whitespace-nowrap sm:text-right">
                       {formatDate(sub.submitted_at)}
                     </span>
 
                     {/* Status badge */}
-                    <span
-                      className={[
-                        'inline-block text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap',
-                        STATUS_STYLES[sub.status] ?? 'bg-slate-100 text-slate-500',
-                      ].join(' ')}
-                    >
+                    <Badge variant={badgeVariant}>
                       {STATUS_LABELS[sub.status] ?? sub.status}
-                    </span>
+                    </Badge>
 
                     {/* Overall band */}
                     <span
                       className={[
-                        'text-sm font-bold tabular-nums whitespace-nowrap sm:text-right',
+                        'text-[13px] tabular-nums whitespace-nowrap sm:text-right',
                         bandColor(bestFb?.band_overall ?? null),
                       ].join(' ')}
                     >
                       {bestFb?.band_overall != null ? bestFb.band_overall : '—'}
                       <ChevronRight
-                        size={14}
-                        className="inline-block ml-1 text-slate-300 group-hover:text-indigo-400 transition-colors"
+                        size={13}
+                        className="inline-block ml-1 text-gray-300 group-hover:text-navy transition-colors"
                         aria-hidden
                       />
                     </span>

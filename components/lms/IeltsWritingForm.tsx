@@ -67,20 +67,20 @@ function FeedbackCard({
   return (
     <div className="space-y-5">
       {/* Overall band + criteria */}
-      <div className="bg-indigo-600 rounded-2xl p-5 text-white">
+      <div className="bg-navy rounded-xl p-5 text-white">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-xs font-medium text-indigo-200 uppercase tracking-wide">
+            <p className="text-[10px] font-medium text-white/60 uppercase tracking-widest">
               {lang === 'vi' ? 'Điểm tổng' : 'Overall Band'}
             </p>
-            <p className="text-4xl font-bold leading-none mt-1">
+            <p className="font-display text-4xl leading-none mt-1">
               {feedback.band_overall ?? '—'}
             </p>
           </div>
           <button
             onClick={onToggleLang}
             aria-label="Toggle language"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition-colors"
           >
             <Globe size={13} aria-hidden />
             {lang === 'en' ? 'VI' : 'EN'}
@@ -88,8 +88,8 @@ function FeedbackCard({
         </div>
         <div className="grid grid-cols-4 gap-2">
           {bandItems.map(({ label, value }) => (
-            <div key={label} className="rounded-lg bg-indigo-500/50 px-2 py-2 text-center">
-              <p className="text-[10px] text-indigo-200">{label}</p>
+            <div key={label} className="rounded-lg bg-white/10 px-2 py-2 text-center">
+              <p className="text-[10px] text-white/60">{label}</p>
               <p className="text-lg font-bold">{value ?? '—'}</p>
             </div>
           ))}
@@ -103,13 +103,13 @@ function FeedbackCard({
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <p className="text-sm text-slate-400 italic">
+        <p className="text-sm text-gray-400 italic">
           {lang === 'vi' ? 'Không có phản hồi chi tiết.' : 'No detailed feedback available.'}
         </p>
       )}
 
       {/* Source + model */}
-      <p className="text-xs text-slate-400">
+      <p className="text-[11px] text-gray-400">
         {feedback.source === 'ai'
           ? lang === 'vi' ? `Chấm tự động · ${feedback.model_used ?? 'AI'}` : `AI scored · ${feedback.model_used ?? ''}`
           : lang === 'vi' ? 'Nhận xét bởi giáo viên' : 'Scored by teacher'}
@@ -243,10 +243,10 @@ export function IeltsWritingForm({
   // ── Word count colour ──────────────────────────────────────────────────────
 
   const wordCountCn = overLimit
-    ? 'text-red-600 font-medium'
+    ? 'text-brand-red font-medium'
     : nearLimit
-    ? 'text-amber-600 font-medium'
-    : 'text-slate-400'
+    ? 'text-amber font-medium'
+    : 'text-gray-400'
 
   const instructions = lang === 'vi'
     ? (assignment.instructions_vi ?? assignment.instructions)
@@ -262,8 +262,8 @@ export function IeltsWritingForm({
       <div className="p-6 space-y-4 text-center">
         {timedOut ? (
           <>
-            <AlertCircle size={32} className="mx-auto text-amber-400" aria-hidden />
-            <p className="text-sm text-slate-700 font-medium">
+            <AlertCircle size={32} className="mx-auto text-amber" aria-hidden />
+            <p className="text-sm text-gray-700 font-medium">
               {lang === 'vi'
                 ? 'Chấm bài đang mất nhiều thời gian hơn dự kiến. Vui lòng tải lại trang sau vài giây.'
                 : 'Marking is taking longer than usual. Refresh the page in a moment to see your feedback.'}
@@ -271,27 +271,27 @@ export function IeltsWritingForm({
           </>
         ) : (
           <>
-            {/* Progress bar */}
+            {/* Progress ring */}
             <div className="relative w-16 h-16 mx-auto">
               <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64" aria-hidden>
-                <circle cx="32" cy="32" r="28" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#e5e7eb" strokeWidth="4" />
                 <circle
                   cx="32" cy="32" r="28" fill="none"
-                  stroke="#6366f1" strokeWidth="4"
+                  stroke="#1E9E75" strokeWidth="4"
                   strokeDasharray="175.9"
                   strokeDashoffset={175.9 * (1 - Math.min(attempts.current / MAX_POLL_ATTEMPTS, 1))}
                   strokeLinecap="round"
                   className="transition-all duration-[4000ms] ease-linear"
                 />
               </svg>
-              <Loader2 size={20} className="absolute inset-0 m-auto text-indigo-500 animate-spin" aria-hidden />
+              <Loader2 size={20} className="absolute inset-0 m-auto text-teal animate-spin" aria-hidden />
             </div>
-            <p className="text-sm text-slate-700 font-medium">
+            <p className="text-sm text-gray-700 font-medium">
               {lang === 'vi'
                 ? 'Bài viết đang được chấm. Thường mất khoảng 20–30 giây.'
                 : 'Your essay is being marked. This usually takes 20–30 seconds.'}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] text-gray-400">
               {lang === 'vi' ? 'Vui lòng không đóng trang này.' : 'Please keep this page open.'}
             </p>
           </>
@@ -308,13 +308,13 @@ export function IeltsWritingForm({
       {/* Lang toggle + instructions */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-800">{assignment.title}</h3>
+          <h3 className="text-[13px] font-medium text-gray-800">{assignment.title}</h3>
           {assignment.instructions_vi && (
             <button
               type="button"
               onClick={() => setLang(l => l === 'en' ? 'vi' : 'en')}
               aria-label="Toggle instruction language"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 text-[11px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
               <Globe size={12} aria-hidden />
               {lang === 'en' ? 'VI' : 'EN'}
@@ -323,8 +323,8 @@ export function IeltsWritingForm({
         </div>
 
         {instructions && (
-          <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
-            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+          <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
               {instructions}
             </p>
           </div>
@@ -333,7 +333,7 @@ export function IeltsWritingForm({
 
       {/* Task 1 image */}
       {assignment.image_url && (
-        <div className="relative w-full h-[420px] rounded-xl border border-slate-200 overflow-hidden">
+        <div className="relative w-full h-[420px] rounded-lg border border-gray-100 overflow-hidden">
           <Image
             src={assignment.image_url}
             alt="IELTS Task 1 chart for this question"
@@ -345,7 +345,7 @@ export function IeltsWritingForm({
 
       {/* Essay textarea */}
       <div className="space-y-1.5">
-        <label htmlFor="essay" className="text-xs font-medium text-slate-500">
+        <label htmlFor="essay" className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
           {lang === 'vi' ? 'Bài viết của bạn' : 'Your essay'}
         </label>
         <textarea
@@ -359,26 +359,26 @@ export function IeltsWritingForm({
               : 'Write your essay here…'
           }
           className={[
-            'w-full rounded-xl border px-4 py-3 text-base leading-relaxed resize-y',
-            'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-            'placeholder:text-slate-300 text-slate-800',
-            overLimit ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white',
+            'w-full rounded-lg border px-4 py-3 text-base leading-relaxed resize-y',
+            'focus:outline-none focus:ring-2 focus:ring-teal focus:border-teal transition-colors',
+            'placeholder:text-gray-300 text-gray-800',
+            overLimit ? 'border-brand-red bg-brand-red-light' : 'border-gray-200 bg-white',
           ].join(' ')}
           style={{ minHeight: '300px', fontSize: '16px', lineHeight: '1.6' }}
         />
 
         {/* Word count */}
         <div className="flex items-center justify-between">
-          <span className={`text-xs ${wordCountCn}`}>
+          <span className={`text-[11px] ${wordCountCn}`}>
             {wordCount} {lang === 'vi' ? 'từ' : 'words'}
             {wordLimit && (
-              <span className="text-slate-400 font-normal">
+              <span className="text-gray-400 font-normal">
                 {' '}/ {wordLimit}
               </span>
             )}
           </span>
           {underMin && wordCount > 0 && (
-            <span className="text-xs text-amber-500">
+            <span className="text-[11px] text-amber">
               {lang === 'vi'
                 ? `Cần ít nhất ${minWords} từ`
                 : `Minimum ${minWords} words`}
@@ -392,12 +392,12 @@ export function IeltsWritingForm({
         type="submit"
         disabled={underMin || isSubmitting || overLimit}
         className={[
-          'w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl',
-          'text-sm font-semibold transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+          'w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg',
+          'text-sm font-medium transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/30',
           underMin || isSubmitting || overLimit
-            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            : 'bg-indigo-600 text-white hover:bg-indigo-700',
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-navy text-white hover:bg-navy-hover',
         ].join(' ')}
       >
         {isSubmitting ? (
@@ -415,9 +415,9 @@ export function IeltsWritingForm({
 
       {/* Already submitted but awaiting */}
       {existingSubmission?.status === 'submitted' && !isAwaiting && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center gap-2">
-          <CheckCircle size={15} className="text-amber-500 flex-shrink-0" aria-hidden />
-          <p className="text-xs text-amber-700">
+        <div className="rounded-lg bg-amber-light border border-amber/20 px-4 py-3 flex items-center gap-2">
+          <CheckCircle size={15} className="text-amber flex-shrink-0" aria-hidden />
+          <p className="text-[12px] text-amber">
             {lang === 'vi'
               ? 'Bài đã được nộp và đang chờ chấm điểm.'
               : 'Essay submitted and awaiting feedback.'}
