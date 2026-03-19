@@ -6,14 +6,14 @@ import { LessonList } from '@/components/admin/lessons/lesson-list'
 import type { Lesson } from '@/lib/validations/lesson'
 
 interface LessonsPageProps {
-  params: Promise<{ courseId: string; moduleId: string }>
+  params: Promise<{ id: string; moduleId: string }>
 }
 
 export async function generateMetadata({ params }: LessonsPageProps) {
-  const { courseId, moduleId } = await params
+  const { id, moduleId } = await params
   const supabase = await createClient()
   const [{ data: courseRaw }, { data: moduleRaw }] = await Promise.all([
-    supabase.from('courses').select('title').eq('id', courseId).single(),
+    supabase.from('courses').select('title').eq('id', id).single(),
     supabase.from('modules').select('title').eq('id', moduleId).single(),
   ])
   const course = courseRaw as { title: string } | null
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: LessonsPageProps) {
 }
 
 export default async function LessonsPage({ params }: LessonsPageProps) {
-  const { courseId, moduleId } = await params
+  const { id, moduleId } = await params
   const supabase = await createClient()
 
   // Three parallel fetches — course title, module title, lessons list
@@ -32,7 +32,7 @@ export default async function LessonsPage({ params }: LessonsPageProps) {
     { data: moduleRaw,  error: moduleError  },
     { data: lessons,    error: lessonsError },
   ] = await Promise.all([
-    supabase.from('courses').select('id, title').eq('id', courseId).single(),
+    supabase.from('courses').select('id, title').eq('id', id).single(),
     supabase.from('modules').select('id, title, course_id').eq('id', moduleId).single(),
     supabase.from('lessons').select('*').eq('module_id', moduleId).order('position', { ascending: true }),
   ])
@@ -46,7 +46,7 @@ export default async function LessonsPage({ params }: LessonsPageProps) {
   const mod    = moduleRaw as { id: string; title: string; course_id: string }
 
   // Guard: module must belong to this course
-  if (mod.course_id !== courseId) {
+  if (mod.course_id !== id) {
     notFound()
   }
 
@@ -77,7 +77,7 @@ export default async function LessonsPage({ params }: LessonsPageProps) {
           <li aria-hidden="true">/</li>
           <li>
             <Link
-              href={`/admin/courses/${courseId}/edit`}
+              href={`/admin/courses/${id}/edit`}
               className="hover:text-slate-700 transition-colors max-w-[160px] truncate inline-block"
             >
               {course.title}
@@ -86,7 +86,7 @@ export default async function LessonsPage({ params }: LessonsPageProps) {
           <li aria-hidden="true">/</li>
           <li>
             <Link
-              href={`/admin/courses/${courseId}/modules`}
+              href={`/admin/courses/${id}/modules`}
               className="hover:text-slate-700 transition-colors"
             >
               Modules
@@ -111,7 +111,7 @@ export default async function LessonsPage({ params }: LessonsPageProps) {
 
       {/* ── Interactive list (client) ───────────────────────────────────── */}
       <LessonList
-        courseId={courseId}
+        courseId={id}
         moduleId={moduleId}
         initialLessons={lessonList}
       />
