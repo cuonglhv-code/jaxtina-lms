@@ -71,15 +71,12 @@ function isLessonPreview(pathname: string, searchParams: URLSearchParams): boole
 // Middleware
 // ---------------------------------------------------------------------------
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl
+  console.log('[middleware] path:', pathname)
 
-  // 1. Short-circuit for paths that must never touch Supabase.
-  //    Includes '/' because app/page.tsx unconditionally redirects to /login anyway.
-  //    This prevents hangs if env vars are missing/wrong on the hosting platform.
-  const PUBLIC_PATHS = ['/', '/login', '/register', '/reset-password']
+  // 1. Short-circuit for api routes and static files.
   if (
-    PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/')
   ) {
@@ -121,11 +118,14 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log('[middleware] session:', user ? 'exists' : 'null')
+
   // 6. Unauthenticated — redirect to login, preserving the intended destination.
   if (!user && isProtected(pathname)) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('redirectTo', pathname)
+    console.log('[middleware] redirecting to:', loginUrl.pathname)
     return NextResponse.redirect(loginUrl)
   }
 
@@ -134,6 +134,7 @@ export async function proxy(request: NextRequest) {
     const homeUrl = request.nextUrl.clone()
     homeUrl.pathname = '/dashboard'
     homeUrl.search = ''
+    console.log('[middleware] redirecting to:', homeUrl.pathname)
     return NextResponse.redirect(homeUrl)
   }
 
@@ -159,6 +160,7 @@ export async function proxy(request: NextRequest) {
         const redirectUrl = request.nextUrl.clone()
         redirectUrl.pathname = roleRule.redirectTo
         redirectUrl.search = ''
+        console.log('[middleware] redirecting to:', redirectUrl.pathname)
         return NextResponse.redirect(redirectUrl)
       }
     }
