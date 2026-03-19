@@ -72,22 +72,33 @@ function isLessonPreview(pathname: string, searchParams: URLSearchParams): boole
 // ---------------------------------------------------------------------------
 
 export async function proxy(request: NextRequest) {
-  // 1. Always refresh the session first so cookies stay alive.
-  const response = await updateSession(request)
-
   const { pathname, searchParams } = request.nextUrl
 
-  // 2. Skip protection for public assets (belt-and-suspenders; matcher handles this too).
+  // 1. Short-circuit for paths that must never touch Supabase.
+  //    This prevents hangs if env vars are missing/wrong on the hosting platform.
+  const PUBLIC_PATHS = ['/login', '/register', '/reset-password']
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/')
+  ) {
+    return NextResponse.next()
+  }
+
+  // 2. Always refresh the session so cookies stay alive.
+  const response = await updateSession(request)
+
+  // 3. Skip protection for unprotected, non-auth paths (e.g. '/').
   if (!isProtected(pathname) && !isAuthOnly(pathname)) {
     return response
   }
 
-  // 3. Allow lesson previews through without auth.
+  // 4. Allow lesson previews through without auth.
   if (isLessonPreview(pathname, searchParams)) {
     return response
   }
 
-  // 4. Resolve the current user from the refreshed session.
+  // 5. Resolve the current user from the refreshed session.
   //    We create a lightweight client here (no cookie writes needed — updateSession
   //    already handled that above and returned the response with fresh cookies).
   const supabase = createServerClient<Database>(
@@ -109,7 +120,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // 5. Unauthenticated — redirect to login, preserving the intended destination.
+  // 6. Unauthenticated — redirect to login, preserving the intended destination.
   if (!user && isProtected(pathname)) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
@@ -117,7 +128,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // 6. Already authenticated — redirect away from login/register/reset.
+  // 7. Already authenticated — redirect away from login/register/reset.
   if (user && isAuthOnly(pathname)) {
     const homeUrl = request.nextUrl.clone()
     homeUrl.pathname = '/dashboard'
@@ -125,7 +136,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(homeUrl)
   }
 
-  // 7. Role-based access control for /teacher/* and /admin/*.
+  // 8. Role-based access control for /teacher/* and /admin/*.
   if (user) {
     const roleRule = ROLE_REQUIREMENTS.find(
       (rule) =>
