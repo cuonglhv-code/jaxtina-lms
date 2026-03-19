@@ -45,14 +45,26 @@ export async function middleware(request: NextRequest) {
   if (!user && !isAuthRoute && pathname !== '/') {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    // Copy refreshed cookies to the redirect response
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      const { name, value, ...options } = cookie
+      redirectResponse.cookies.set(name, value, options)
+    })
+    return redirectResponse
   }
 
   // If user IS logged in and tries to access login or register, send them to their dashboard
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    // Copy refreshed cookies to the redirect response
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      const { name, value, ...options } = cookie
+      redirectResponse.cookies.set(name, value, options)
+    })
+    return redirectResponse
   }
 
   return supabaseResponse
