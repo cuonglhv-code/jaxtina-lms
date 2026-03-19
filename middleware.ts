@@ -40,9 +40,11 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // FIX: Use getUser() instead of getSession() to securely validate 
+    // the session and automatically refresh the auth token if needed.
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)
@@ -56,6 +58,7 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
+// Keep your existing matcher config
 export const config = {
   matcher: [
     '/admin/:path*',
