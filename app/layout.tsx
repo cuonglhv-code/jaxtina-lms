@@ -19,7 +19,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
-      <body className={`${dmSans.variable} ${playfair.variable} font-sans antialiased`}>
+      <body className={`${dmSans.variable} ${playfair.variable} font-sans antialiased bg-white text-gray-900`}>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
