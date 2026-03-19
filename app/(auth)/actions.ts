@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 
@@ -68,7 +69,8 @@ export async function loginAction(
   const { email, password, redirectTo } = parsed.data
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  // FIX: Extract authData directly from the sign-in response
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     // Surface auth errors without leaking implementation details
@@ -78,18 +80,15 @@ export async function loginAction(
     return { error: error.message }
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  // FIX: Use authData.user instead of making a second round-trip request
+  if (!authData.user) {
     return { error: 'Sign-in succeeded but session could not be established. Please try again.' }
   }
 
   const { data: profile } = (await supabase
     .from('user_profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', authData.user.id)
     .single()) as { data: { role: string } | null; error: unknown }
 
   const destination =
@@ -97,6 +96,8 @@ export async function loginAction(
     (profile?.role ? ROLE_DASHBOARD[profile.role] : undefined) ??
     '/dashboard'
 
+  // FIX: Force Next.js to drop its cached state so the middleware picks up the session properly
+  revalidatePath('/', 'layout')
   redirect(destination)
 }
 
@@ -126,8 +127,6 @@ export async function registerAction(
     email,
     password,
     options: {
-      // The handle_new_user DB trigger reads raw_user_meta_data->>'full_name'
-      // and inserts a user_profiles row with role='learner' by default.
       data: { full_name: fullName },
     },
   })
@@ -139,5 +138,7 @@ export async function registerAction(
     return { error: error.message }
   }
 
+  // FIX: Revalidate layout cache on register as well
+  revalidatePath('/', 'layout')
   redirect('/dashboard')
 }
